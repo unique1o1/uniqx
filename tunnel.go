@@ -28,11 +28,12 @@ func openTunnel() {
 	u := url.URL{Scheme: "wss", Host: *host, Path: "/_ws/", RawQuery: getParams()}
 	fmt.Printf("\u001B[34mConnecting to %s \n\n", u.String())
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
-	keepAlive(c, time.Minute)
 
 	if err != nil {
 		log.Fatal("dial:", err)
 	}
+	keepAlive(c, time.Minute)
+
 	defer c.Close()
 
 	message, err := ReadHandshakeMessage(c)
