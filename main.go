@@ -11,7 +11,7 @@ import (
 
 var port = flag.String("port", "", "Port number of the local server")
 var subdomain = flag.String("subdomain", "", "Name for Sub-domain")
-var host = flag.String("host", "open.yunik.com.np", "Host of the remote server")
+var host = flag.String("host", "", "Host of the remote tunnel server")
 
 func init() {
 	flag.Parse()
@@ -31,6 +31,10 @@ func main() {
 	}()
 	if *port == "" {
 		fmt.Println("Please specify argument port i.e -port 8000")
+		return
+	}
+	if *host == "" {
+		fmt.Println("Please specify argument host i.e -host example.com")
 		return
 	}
 	fmt.Printf("\033[34m \nPress Ctrl+C to quit.\n")
