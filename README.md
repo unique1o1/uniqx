@@ -29,7 +29,7 @@ $ jprq-go-client -port  8000
 
 Press Ctrl+C to stop it
 
-## [NEW] Custom Subdomain
+## Custom Subdomain
 
 Replace `subdomain` with a subdomain you want
 
