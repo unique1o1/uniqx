@@ -18,7 +18,12 @@
 ```bash
 $ go install github.com/unique1o1/jprq-go-client
 ```
-
+## Using pre-built binary
+Replace link with the release of your platforms binary
+```bash
+$ curl -fsSL https://github.com/unique1o1/jprq-go-client/releases/download/1.0.0/jprq-linux_amd64.tar.gz > jprq-linux_amd64.tar.gz && tar -xvf jprq-linux_amd64.tar.gz
+$ sudo mv ./jprq-go-client /usr/local/bin
+```
 ## How to use
 
 Replace 8000 with the port you want to expose and replace host with your tunnel server domain
