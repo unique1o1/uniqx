@@ -9,7 +9,6 @@ import (
 	"time"
 )
 
-
 func keepAlive(c *websocket.Conn, timeout time.Duration) {
 	lastResponse := time.Now()
 	c.SetPongHandler(func(msg string) error {
@@ -63,4 +62,3 @@ func JoinURL(base string, paths ...string) string {
 	p := path.Join(paths...)
 	return fmt.Sprintf("%s/%s", strings.TrimRight(base, "/"), strings.TrimLeft(p, "/"))
 }
-
