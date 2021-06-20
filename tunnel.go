@@ -31,7 +31,6 @@ func openTunnel() {
 	if err != nil {
 		fmt.Println("dial:", err)
 	}
-	keepAlive(c, time.Minute)
 
 	defer c.Close()
 
@@ -42,12 +41,15 @@ func openTunnel() {
 	}
 	//fmt.Printf("\u001B[31m Your are now online at: https://%s \n\n", message.Host)
 	fmt.Printf("\033[32m%-25s Online\033[00m \n", "Tunnel Status")
-	fmt.Printf("%-25s https://%s -> http://127.0.0.1:%s \n\n", "Forwarded", message.Host, *port)
-	client := Client{
+	fmt.Printf("%-25s https://%s -> http://127.0.0.1:%s\n", "Forwarded", message.Host, *port)
+	fmt.Printf("%-25s http://%s -> http://127.0.0.1:%s \n\n", "Forwarded", message.Host, *port)
+	client := &Client{
 		host:  fmt.Sprintf("http://127.0.0.1:%s", *port),
 		token: message.Token,
 		conn:  c,
 	}
+	keepAlive(client, time.Minute)
+
 	for {
 		message, err := ReadMessage(c)
 		if err != nil {

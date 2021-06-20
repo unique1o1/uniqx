@@ -8,6 +8,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"io"
 	"net/http"
+	"sync"
 )
 
 type HandshakeResponseMessage struct {
@@ -35,9 +36,15 @@ type Client struct {
 	host  string
 	token string
 	conn  *websocket.Conn
+	sync.Mutex
 }
 
-func (c Client) process(message *ResponseMessage) {
+func (c *Client) WriteMessage(messageType int, data []byte) error {
+	c.Lock()
+	defer c.Unlock()
+	return c.conn.WriteMessage(messageType, data)
+}
+func (c *Client) process(message *ResponseMessage) {
 	client := http.DefaultClient
 	req, err := http.NewRequest(message.Method, JoinURL(c.host, message.URL), bytes.NewBuffer(message.Body))
 	if err != nil {
@@ -69,6 +76,6 @@ func (c Client) process(message *ResponseMessage) {
 			return m
 		}(),
 	})
-	_ = c.conn.WriteMessage(websocket.BinaryMessage, reqMessage)
+	_ = c.WriteMessage(websocket.BinaryMessage, reqMessage)
 
 }

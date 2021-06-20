@@ -9,9 +9,9 @@ import (
 	"time"
 )
 
-func keepAlive(c *websocket.Conn, timeout time.Duration) {
+func keepAlive(c *Client, timeout time.Duration) {
 	lastResponse := time.Now()
-	c.SetPongHandler(func(msg string) error {
+	c.conn.SetPongHandler(func(msg string) error {
 		lastResponse = time.Now()
 		return nil
 	})
@@ -24,7 +24,7 @@ func keepAlive(c *websocket.Conn, timeout time.Duration) {
 			}
 			time.Sleep(timeout / 2)
 			if time.Since(lastResponse) > timeout {
-				c.Close()
+				c.conn.Close()
 				return
 			}
 		}
