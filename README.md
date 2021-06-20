@@ -21,10 +21,10 @@ $ go install github.com/unique1o1/jprq-go-client
 
 ## How to use
 
-Replace 8000 with the port you want to expose
+Replace 8000 with the port you want to expose and replace host with your tunnel server domain
 
 ```
-$ jprq-go-client -port  8000
+$ jprq-go-client -port  8000 -host example.com
 ```
 
 Press Ctrl+C to stop it
@@ -34,7 +34,7 @@ Press Ctrl+C to stop it
 Replace `subdomain` with a subdomain you want
 
 ```
-$ jprq -port 8000 -subdomain=subdomain
+$ jprq -port 8000 -subdomain=subdomain -host example.com
 ```
 
 # Deploy your own jprq tunnel server
