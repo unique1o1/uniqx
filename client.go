@@ -18,27 +18,28 @@ type HandshakeResponseMessage struct {
 	Token string `bson:"token"`
 }
 type ResponseMessage struct {
-	ID     uuid.UUID         `bson:"id"`
-	Method string            `bson:"method"`
-	URL    string            `bson:"url"`
-	Body   []byte            `bson:"body"`
-	Header map[string]string `bson:"header"`
-	Cookie []*http.Cookie    `bson:"cookie"`
+	ID     uuid.UUID           `bson:"id"`
+	Method string              `bson:"method"`
+	URL    string              `bson:"url"`
+	Body   []byte              `bson:"body"`
+	Header map[string][]string `bson:"header"`
+	Cookie []*http.Cookie      `bson:"cookie"`
 }
 
 type RequestMessage struct {
-	RequestId uuid.UUID         `bson:"request_id"`
-	Token     string            `bson:"token"`
-	Body      []byte            `bson:"body"`
-	Status    int               `bson:"status"`
-	Header    map[string]string `bson:"header"`
-	Cookie    []*http.Cookie    `bson:"cookie"`
+	RequestId uuid.UUID           `bson:"request_id"`
+	Token     string              `bson:"token"`
+	Body      []byte              `bson:"body"`
+	Status    int                 `bson:"status"`
+	Header    map[string][]string `bson:"header"`
+	Cookie    []*http.Cookie      `bson:"cookie"`
 }
 
 type Client struct {
-	host  string
-	token string
-	conn  *websocket.Conn
+	baseUrl string
+	host    string
+	token   string
+	conn    *websocket.Conn
 	sync.Mutex
 }
 
@@ -50,7 +51,7 @@ func (c *Client) WriteMessage(messageType int, data []byte) error {
 
 func (c *Client) process(message *ResponseMessage) {
 	jar, _ := cookiejar.New(&cookiejar.Options{})
-	website, _ := url.Parse(JoinURL(c.host, message.URL))
+	website, _ := url.Parse(JoinURL(c.baseUrl, message.URL))
 	jar.SetCookies(
 		website,
 		message.Cookie,
@@ -58,14 +59,10 @@ func (c *Client) process(message *ResponseMessage) {
 	client := http.Client{
 		Jar: jar,
 	}
-	req, err := http.NewRequest(message.Method, JoinURL(c.host, message.URL), bytes.NewBuffer(message.Body))
-	if err != nil {
-		fmt.Println(err)
-	}
-	for key, value := range message.Header {
-		req.Header.Add(key, value)
-	}
 
+	req, _ := http.NewRequest(message.Method, JoinURL(c.baseUrl, message.URL), bytes.NewBuffer(message.Body))
+	req.Host = c.host
+	req.Header = message.Header
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err)
@@ -82,13 +79,7 @@ func (c *Client) process(message *ResponseMessage) {
 		Body:      body,
 		Status:    resp.StatusCode,
 		Cookie:    client.Jar.Cookies(website),
-		Header: func() map[string]string {
-			m := make(map[string]string)
-			for key := range resp.Header {
-				m[key] = resp.Header.Get(key)
-			}
-			return m
-		}(),
+		Header:    resp.Header,
 	})
 	_ = c.WriteMessage(websocket.BinaryMessage, reqMessage)
 

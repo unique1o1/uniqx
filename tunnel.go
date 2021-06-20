@@ -44,9 +44,10 @@ func openTunnel() {
 	fmt.Printf("%-25s https://%s -> http://127.0.0.1:%s\n", "Forwarded", message.Host, *port)
 	fmt.Printf("%-25s http://%s -> http://127.0.0.1:%s \n\n", "Forwarded", message.Host, *port)
 	client := &Client{
-		host:  fmt.Sprintf("http://127.0.0.1:%s", *port),
-		token: message.Token,
-		conn:  c,
+		baseUrl: fmt.Sprintf("http://127.0.0.1:%s", *port),
+		host:    message.Host,
+		token:   message.Token,
+		conn:    c,
 	}
 	keepAlive(client, time.Minute)
 
