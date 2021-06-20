@@ -8,6 +8,8 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"io"
 	"net/http"
+	"net/http/cookiejar"
+	"net/url"
 	"sync"
 )
 
@@ -16,12 +18,12 @@ type HandshakeResponseMessage struct {
 	Token string `bson:"token"`
 }
 type ResponseMessage struct {
-	ID           uuid.UUID            `bson:"id"`
-	Method       string               `bson:"method"`
-	URL          string               `bson:"url"`
-	Body         []byte               `bson:"body"`
-	Header       map[string]string    `bson:"header"`
-	ResponseChan chan ResponseMessage `bson:"-"`
+	ID     uuid.UUID         `bson:"id"`
+	Method string            `bson:"method"`
+	URL    string            `bson:"url"`
+	Body   []byte            `bson:"body"`
+	Header map[string]string `bson:"header"`
+	Cookie []*http.Cookie    `bson:"cookie"`
 }
 
 type RequestMessage struct {
@@ -30,6 +32,7 @@ type RequestMessage struct {
 	Body      []byte            `bson:"body"`
 	Status    int               `bson:"status"`
 	Header    map[string]string `bson:"header"`
+	Cookie    []*http.Cookie    `bson:"cookie"`
 }
 
 type Client struct {
@@ -44,8 +47,17 @@ func (c *Client) WriteMessage(messageType int, data []byte) error {
 	defer c.Unlock()
 	return c.conn.WriteMessage(messageType, data)
 }
+
 func (c *Client) process(message *ResponseMessage) {
-	client := http.DefaultClient
+	jar, _ := cookiejar.New(&cookiejar.Options{})
+	website, _ := url.Parse(JoinURL(c.host, message.URL))
+	jar.SetCookies(
+		website,
+		message.Cookie,
+	)
+	client := http.Client{
+		Jar: jar,
+	}
 	req, err := http.NewRequest(message.Method, JoinURL(c.host, message.URL), bytes.NewBuffer(message.Body))
 	if err != nil {
 		fmt.Println(err)
@@ -53,6 +65,7 @@ func (c *Client) process(message *ResponseMessage) {
 	for key, value := range message.Header {
 		req.Header.Add(key, value)
 	}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err)
@@ -68,6 +81,7 @@ func (c *Client) process(message *ResponseMessage) {
 		Token:     c.token,
 		Body:      body,
 		Status:    resp.StatusCode,
+		Cookie:    client.Jar.Cookies(website),
 		Header: func() map[string]string {
 			m := make(map[string]string)
 			for key := range resp.Header {
