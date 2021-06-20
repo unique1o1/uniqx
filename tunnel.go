@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/gorilla/websocket"
-	"log"
 	"net/url"
 	"os"
 	"os/user"
@@ -20,7 +19,7 @@ func getParams() string {
 			}
 			return *subdomain
 		}())
-
+	params.Add("port", *port)
 	return params.Encode()
 }
 func openTunnel() {
@@ -30,7 +29,7 @@ func openTunnel() {
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 
 	if err != nil {
-		log.Fatal("dial:", err)
+		fmt.Println("dial:", err)
 	}
 	keepAlive(c, time.Minute)
 
