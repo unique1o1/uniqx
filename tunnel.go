@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gofrs/uuid"
 	"github.com/gorilla/websocket"
+	"log"
 	"net/url"
 	"os"
 	"os/user"
@@ -55,8 +56,14 @@ func openTunnel() {
 	keepAlive(client, time.Minute)
 	for {
 		message, err := ReadMessage(c)
+
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err) //TODO remove
+			if websocket.IsCloseError(err, websocket.CloseNoStatusReceived, websocket.CloseAbnormalClosure) {
+				//websocket.CloseAbnormalClosure is calle when process exits or websocket.close() is called
+				fmt.Println("\n\033[31mServer connection closed\033[00m")
+				break
+			}
 			continue
 		}
 		if value, ok := message.Header["Upgrade"]; ok && (value[0] == "websocket") {
@@ -69,6 +76,5 @@ func openTunnel() {
 		} else {
 			go client.process(message)
 		}
-
 	}
 }

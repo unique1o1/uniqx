@@ -18,7 +18,7 @@ func keepAlive(c *Client, timeout time.Duration) {
 
 	go func() {
 		for {
-			err := c.WriteMessage(websocket.PingMessage, []byte("keepalive"))
+			err := c.WriteMessage(websocket.PingMessage, &RequestMessage{})
 			if err != nil {
 				return
 			}
