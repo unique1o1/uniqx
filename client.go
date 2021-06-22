@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"github.com/gofrs/uuid"
 	"github.com/gorilla/websocket"
@@ -20,6 +21,7 @@ type HandshakeResponseMessage struct {
 }
 
 type ResponseMessage struct {
+	Status        int            `bson:"status,omitempty"`
 	SocketMsgType int            `bson:"socket_msg_type,omitempty"`
 	ID            uuid.UUID      `bson:"id,omitempty"`
 	Method        string         `bson:"method,omitempty"`
@@ -49,16 +51,18 @@ type Client struct {
 	sync.Mutex
 }
 
-func (c *Client) WriteMessage(messageType int, data []byte) error {
+func (c *Client) WriteMessage(messageType int, data *RequestMessage) error {
+	reqMessage, _ := bson.Marshal(data)
 	c.Lock()
 	defer c.Unlock()
-	return c.conn.WriteMessage(messageType, data)
+	return c.conn.WriteMessage(messageType, reqMessage)
 }
 
 func (c *Client) wsProcess(message *ResponseMessage) {
 	socketId := message.ID
 	u, _ := url.Parse(JoinURL(c.dstWSUrl, message.URL))
 	log.Println(u)
+	log.Println(message.Header)
 	requestHeader := http.Header{}
 
 	{
@@ -79,52 +83,64 @@ func (c *Client) wsProcess(message *ResponseMessage) {
 		// Set the originating protocol of the incoming HTTP request. The SSL might
 		// be terminated on our site and because we doing proxy adding this would
 		// be helpful for applications on the backend.
+		requestHeader.Set("Host", c.host)
 		requestHeader.Set("X-Forwarded-Proto", "http")
+		requestHeader.Set("User-Agent", message.Header.Get("User-Agent"))
+		//requestHeader.Set("Sec-WebSocket-Key", message.Header.Get("Sec-WebSocket-Key"))
+		//requestHeader.Set("Sec-WebSocket-Extensions", message.Header.Get("Sec-WebSocket-Extensions"))
+		//requestHeader.Set("Sec-WebSocket-Version", message.Header.Get("Sec-WebSocket-Version"))
 	}
+	log.Println(requestHeader)
 	dstConn, resp, err := websocket.DefaultDialer.Dial(u.String(), requestHeader)
-
 	if err != nil {
+		reqMessage := &RequestMessage{
+			RequestId: message.ID,
+			Token:     c.token,
+			Status:    -1,
+		}
+		c.WriteMessage(websocket.BinaryMessage, reqMessage)
 		log.Println("dial:", err)
 		return
 	}
 	defer dstConn.Close()
-	reqMessage, _ := bson.Marshal(&RequestMessage{
+	reqMessage := &RequestMessage{
 		Header:    resp.Header,
 		RequestId: message.ID,
 		Token:     c.token,
-	})
-	if err != nil {
-		return
 	}
 	c.WriteMessage(websocket.BinaryMessage, reqMessage)
+
+	errClient := make(chan error, 1)
+	errBackend := make(chan error, 1)
 	go func() {
 		for {
 			msgType, msg, err := dstConn.ReadMessage()
 			if err != nil {
-				m := websocket.FormatCloseMessage(websocket.CloseNormalClosure, fmt.Sprintf("%v", err))
-				if e, ok := err.(*websocket.CloseError); ok {
-					if e.Code != websocket.CloseNoStatusReceived {
-						m = websocket.FormatCloseMessage(e.Code, e.Text)
+				if websocket.IsCloseError(err, websocket.CloseNoStatusReceived, websocket.CloseAbnormalClosure) {
+					//websocket.CloseAbnormalClosure is called when server process exits or websocket.close() is called
+					fmt.Println("\n\033[31mServer connection closed\033[00m")
+					errClient <- err
+					log.Println(err)
+					reqMessage := &RequestMessage{
+						RequestId:     message.ID,
+						Token:         c.token,
+						Status:        -1,
+						SocketMsgType: msgType,
+						Body:          []byte("connection closed"),
 					}
+					c.WriteMessage(websocket.CloseMessage, reqMessage)
 				}
-				log.Println(err)
-				reqMessage, _ := bson.Marshal(&RequestMessage{
-					RequestId:     message.ID,
-					Token:         c.token,
-					SocketMsgType: msgType,
-					Body:          m,
-				})
-				c.WriteMessage(websocket.CloseMessage, reqMessage)
 				break
 			}
-			reqMessage, _ := bson.Marshal(&RequestMessage{
+			reqMessage = &RequestMessage{
 				RequestId:     message.ID,
 				Token:         c.token,
 				SocketMsgType: msgType,
 				Body:          msg,
-			})
+			}
 			err = c.WriteMessage(websocket.BinaryMessage, reqMessage)
 			if err != nil {
+				errClient <- err
 				log.Println(err)
 				break
 			}
@@ -133,8 +149,9 @@ func (c *Client) wsProcess(message *ResponseMessage) {
 	}()
 	go func() {
 		for message = range c.socketTracker[socketId] {
-			log.Println(string(message.Body))
-
+			if message.Status == -1 {
+				errBackend <- errors.New("connection closed")
+			}
 			err = dstConn.WriteMessage(message.SocketMsgType, message.Body)
 			if err != nil {
 				log.Println(err)
@@ -143,7 +160,21 @@ func (c *Client) wsProcess(message *ResponseMessage) {
 		}
 
 	}()
-
+	{
+		var message string
+		select {
+		case err = <-errClient:
+			{
+				// close server side goroutine too
+				close(c.socketTracker[socketId])
+			}
+			message = "websocketproxy: Error when copying from client to backend: %v"
+			log.Printf(message, err)
+		case err = <-errBackend:
+			message = "websocketproxy: Error when copying from backend to client: %v"
+			log.Printf(message, err)
+		}
+	}
 }
 func (c *Client) process(message *ResponseMessage) {
 	jar, _ := cookiejar.New(&cookiejar.Options{})
@@ -170,14 +201,14 @@ func (c *Client) process(message *ResponseMessage) {
 	if err != nil {
 		return
 	}
-	reqMessage, _ := bson.Marshal(&RequestMessage{
+	reqMessage := &RequestMessage{
 		RequestId: message.ID,
 		Token:     c.token,
 		Body:      body,
 		Status:    resp.StatusCode,
 		Cookie:    client.Jar.Cookies(website),
 		Header:    resp.Header,
-	})
+	}
 	_ = c.WriteMessage(websocket.BinaryMessage, reqMessage)
 
 }
