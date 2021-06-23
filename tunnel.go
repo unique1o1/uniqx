@@ -32,6 +32,7 @@ func openTunnel() {
 
 	if err != nil {
 		fmt.Println("dial:", err)
+		os.Exit(0)
 	}
 
 	defer c.Close()
@@ -50,24 +51,30 @@ func openTunnel() {
 		dstWSUrl:      fmt.Sprintf("ws://127.0.0.1:%s", *port),
 		host:          message.Host,
 		token:         message.Token,
-		conn:          c,
+		conn:          &Socket{Conn: c},
 		socketTracker: make(map[uuid.UUID]chan *ResponseMessage),
 	}
-	keepAlive(client, time.Minute)
+	log.Println(client.token)
+	//keepAlive(client.conn, time.Minute)
+	c.SetCloseHandler(func(code int, text string) error {
+		message := websocket.FormatCloseMessage(code, "")
+		c.WriteControl(websocket.CloseMessage, message, time.Now().Add(time.Second))
+		log.Println("called close")
+		return nil
+	})
+
 	for {
 		message, err := ReadMessage(c)
-
 		if err != nil {
 			log.Println(err) //TODO remove
-			if websocket.IsCloseError(err, websocket.CloseNoStatusReceived, websocket.CloseAbnormalClosure) {
+			if _, ok := err.(*websocket.CloseError); ok {
 				//websocket.CloseAbnormalClosure is calle when process exits or websocket.close() is called
 				fmt.Println("\n\033[31mServer connection closed\033[00m")
 				break
 			}
-			continue
+			break
 		}
 		if value, ok := message.Header["Upgrade"]; ok && (value[0] == "websocket") {
-			fmt.Println("sucker")
 			ch := make(chan *ResponseMessage)
 			client.socketTracker[message.ID] = ch
 			go client.wsProcess(message)

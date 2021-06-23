@@ -13,7 +13,19 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"sync"
+	"time"
 )
+
+type Socket struct {
+	sync.Mutex
+	*websocket.Conn
+}
+
+func (c *Socket) WriteMessage(messageType int, data []byte) error {
+	c.Lock()
+	defer c.Unlock()
+	return c.Conn.WriteMessage(messageType, data)
+}
 
 type HandshakeResponseMessage struct {
 	Host  string `bson:"host"`
@@ -46,15 +58,15 @@ type Client struct {
 	dstWSUrl      string
 	host          string
 	token         string
-	conn          *websocket.Conn
+	conn          *Socket
 	socketTracker map[uuid.UUID]chan *ResponseMessage
-	sync.Mutex
 }
 
 func (c *Client) WriteMessage(messageType int, data *RequestMessage) error {
-	reqMessage, _ := bson.Marshal(data)
-	c.Lock()
-	defer c.Unlock()
+	reqMessage, err := bson.Marshal(data)
+	if err != nil {
+		return err
+	}
 	return c.conn.WriteMessage(messageType, reqMessage)
 }
 
@@ -91,7 +103,7 @@ func (c *Client) wsProcess(message *ResponseMessage) {
 		//requestHeader.Set("Sec-WebSocket-Version", message.Header.Get("Sec-WebSocket-Version"))
 	}
 	log.Println(requestHeader)
-	dstConn, resp, err := websocket.DefaultDialer.Dial(u.String(), requestHeader)
+	conn, resp, err := websocket.DefaultDialer.Dial(u.String(), requestHeader)
 	if err != nil {
 		reqMessage := &RequestMessage{
 			RequestId: message.ID,
@@ -102,21 +114,23 @@ func (c *Client) wsProcess(message *ResponseMessage) {
 		log.Println("dial:", err)
 		return
 	}
-	defer dstConn.Close()
+	defer conn.Close()
+	dstConn := &Socket{Conn: conn}
+	keepAlive(dstConn, time.Second*15)
+
 	reqMessage := &RequestMessage{
 		Header:    resp.Header,
 		RequestId: message.ID,
 		Token:     c.token,
 	}
 	c.WriteMessage(websocket.BinaryMessage, reqMessage)
-
 	errClient := make(chan error, 1)
 	errBackend := make(chan error, 1)
 	go func() {
 		for {
 			msgType, msg, err := dstConn.ReadMessage()
 			if err != nil {
-				if websocket.IsCloseError(err, websocket.CloseNoStatusReceived, websocket.CloseAbnormalClosure) {
+				if _, ok := err.(*websocket.CloseError); ok {
 					//websocket.CloseAbnormalClosure is called when server process exits or websocket.close() is called
 					fmt.Println("\n\033[31mServer connection closed\033[00m")
 					errClient <- err
@@ -124,13 +138,15 @@ func (c *Client) wsProcess(message *ResponseMessage) {
 					reqMessage := &RequestMessage{
 						RequestId:     message.ID,
 						Token:         c.token,
-						Status:        -1,
+						Status:        -1, // -1 indicates backend ws connection closed
 						SocketMsgType: msgType,
 						Body:          []byte("connection closed"),
 					}
 					c.WriteMessage(websocket.CloseMessage, reqMessage)
+					break
 				}
-				break
+				log.Println("err")
+				continue
 			}
 			reqMessage = &RequestMessage{
 				RequestId:     message.ID,
@@ -167,6 +183,7 @@ func (c *Client) wsProcess(message *ResponseMessage) {
 			{
 				// close server side goroutine too
 				close(c.socketTracker[socketId])
+				delete(c.socketTracker, socketId)
 			}
 			message = "websocketproxy: Error when copying from client to backend: %v"
 			log.Printf(message, err)
@@ -209,6 +226,6 @@ func (c *Client) process(message *ResponseMessage) {
 		Cookie:    client.Jar.Cookies(website),
 		Header:    resp.Header,
 	}
-	_ = c.WriteMessage(websocket.BinaryMessage, reqMessage)
+	c.WriteMessage(websocket.BinaryMessage, reqMessage)
 
 }

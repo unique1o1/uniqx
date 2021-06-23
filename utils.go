@@ -4,27 +4,28 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"gopkg.in/mgo.v2/bson"
+	"log"
 	"path"
 	"strings"
 	"time"
 )
 
-func keepAlive(c *Client, timeout time.Duration) {
+func keepAlive(ws *Socket, timeout time.Duration) {
 	lastResponse := time.Now()
-	c.conn.SetPongHandler(func(msg string) error {
+	ws.SetPongHandler(func(msg string) error {
+		log.Println("pngpngpngpn")
 		lastResponse = time.Now()
 		return nil
 	})
-
 	go func() {
 		for {
-			err := c.WriteMessage(websocket.PingMessage, &RequestMessage{})
+			err := ws.WriteMessage(websocket.PingMessage, []byte("ping"))
 			if err != nil {
 				return
 			}
 			time.Sleep(timeout / 2)
 			if time.Since(lastResponse) > timeout {
-				c.conn.Close()
+				ws.Close()
 				return
 			}
 		}
