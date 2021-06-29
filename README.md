@@ -21,8 +21,8 @@ $ go install github.com/unique1o1/jprq-go-client
 ## Using pre-built binary
 Replace link with the release of your platforms binary
 ```bash
-$ curl -fsSL https://github.com/unique1o1/jprq-go-client/releases/download/1.0.1/jprq-go-client_linux_amd64.tar.gz > jprq-linux_amd64.tar.gz && tar -xvf jprq-linux_amd64.tar.gz
-$ sudo mv ./jprq-go-client /usr/local/bin
+$ curl -fsSL https://github.com/unique1o1/jprq-go-client/releases/download/v1.1.0/jprq_linux_amd64.tar.gz > jprq_linux_amd64.tar.gz && tar -xvf jprq_linux_amd64.tar.gz
+$ sudo mv ./jprq /usr/local/bin
 ```
 ## How to use
 
