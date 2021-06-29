@@ -54,12 +54,10 @@ func openTunnel() {
 		conn:          &Socket{Conn: c},
 		socketTracker: make(map[uuid.UUID]chan *ResponseMessage),
 	}
-	log.Println(client.token)
 	//keepAlive(client.conn, time.Minute)
 	c.SetCloseHandler(func(code int, text string) error {
 		message := websocket.FormatCloseMessage(code, "")
 		c.WriteControl(websocket.CloseMessage, message, time.Now().Add(time.Second))
-		log.Println("called close")
 		return nil
 	})
 
