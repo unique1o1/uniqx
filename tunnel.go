@@ -64,12 +64,11 @@ func openTunnel() {
 	for {
 		message, err := ReadMessage(c)
 		if err != nil {
-			log.Println(err) //TODO remove
 			if _, ok := err.(*websocket.CloseError); ok {
-				//websocket.CloseAbnormalClosure is calle when process exits or websocket.close() is called
 				fmt.Println("\n\033[31mServer connection closed\033[00m")
 				break
 			}
+			log.Println(err)
 			break
 		}
 		if value, ok := message.Header["Upgrade"]; ok && (value[0] == "websocket") {
