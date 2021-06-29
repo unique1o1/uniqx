@@ -59,6 +59,3 @@ You have to deploy your own tunnel server for the client to work. Visit [jprq.io
 
 - Doesn't work with HTTP Polling
 
-## Troubleshooting
-
-- With serving React, Vue or any other modern web apps, make sure you run production server or build the app and serve static files as JPRQ is not capable of exposing Websocket.
