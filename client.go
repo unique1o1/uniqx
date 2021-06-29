@@ -69,26 +69,76 @@ func (c *Client) WriteMessage(messageType int, data *RequestMessage) error {
 	}
 	return c.conn.WriteMessage(messageType, reqMessage)
 }
+func (c *Client) writeDst(dstConn *Socket, message *ResponseMessage, errBackend chan error) {
+	for message = range c.socketTracker[message.ID] {
+		if message.Status == -1 {
+			errBackend <- errors.New("connection closed")
+		}
+		err := dstConn.WriteMessage(message.SocketMsgType, message.Body)
+		if err != nil {
+			log.Println(err)
+			break
+		}
+	}
+}
+
+func (c *Client) readDst(dstConn *Socket, message *ResponseMessage, errClient chan error) {
+	for {
+		msgType, msg, err := dstConn.ReadMessage()
+		if err != nil {
+			if _, ok := err.(*websocket.CloseError); ok {
+				//websocket.CloseAbnormalClosure is called when server process exits or websocket.close() is called
+				fmt.Println("\n\033[31mServer connection closed\033[00m")
+				errClient <- err
+				log.Println(err)
+				reqMessage := &RequestMessage{
+					RequestId:     message.ID,
+					Token:         c.token,
+					Status:        -1, // -1 indicates backend ws connection closed
+					SocketMsgType: msgType,
+					Body:          []byte("connection closed"),
+				}
+				c.WriteMessage(websocket.CloseMessage, reqMessage)
+				break
+			}
+			log.Println("err")
+			continue
+		}
+		reqMessage := &RequestMessage{
+			RequestId:     message.ID,
+			Token:         c.token,
+			SocketMsgType: msgType,
+			Body:          msg,
+		}
+		err = c.WriteMessage(websocket.BinaryMessage, reqMessage)
+		if err != nil {
+			errClient <- err
+			log.Println(err)
+			break
+		}
+	}
+
+}
 
 func (c *Client) wsProcess(message *ResponseMessage) {
+	website, _ := url.Parse(JoinURL(c.dstUrl, message.URL))
+	{
+		PrettyPrintRequest(101, message.Method, website.Path)
+	}
 	socketId := message.ID
 	u, _ := url.Parse(JoinURL(c.dstWSUrl, message.URL))
-	log.Println(u)
-	log.Println(message.Header)
 	requestHeader := http.Header{}
 
 	{
 		// Pass headers from the incoming request to the dialer to forward them to
 		// the final destinations.
 		if origin := message.Header.Get("Origin"); origin != "" {
-			log.Println(origin)
 			requestHeader.Add("Origin", origin)
 		}
 		for _, prot := range message.Header[http.CanonicalHeaderKey("Sec-WebSocket-Protocol")] {
 			requestHeader.Add("Sec-WebSocket-Protocol", prot)
 		}
 		for _, cookie := range message.Header[http.CanonicalHeaderKey("Cookie")] {
-			log.Println(cookie)
 			requestHeader.Add("Cookie", cookie)
 		}
 
@@ -98,11 +148,8 @@ func (c *Client) wsProcess(message *ResponseMessage) {
 		requestHeader.Set("Host", c.host)
 		requestHeader.Set("X-Forwarded-Proto", "http")
 		requestHeader.Set("User-Agent", message.Header.Get("User-Agent"))
-		//requestHeader.Set("Sec-WebSocket-Key", message.Header.Get("Sec-WebSocket-Key"))
-		//requestHeader.Set("Sec-WebSocket-Extensions", message.Header.Get("Sec-WebSocket-Extensions"))
-		//requestHeader.Set("Sec-WebSocket-Version", message.Header.Get("Sec-WebSocket-Version"))
 	}
-	log.Println(requestHeader)
+	//log.Println(requestHeader)
 	conn, resp, err := websocket.DefaultDialer.Dial(u.String(), requestHeader)
 	if err != nil {
 		reqMessage := &RequestMessage{
@@ -126,56 +173,8 @@ func (c *Client) wsProcess(message *ResponseMessage) {
 	c.WriteMessage(websocket.BinaryMessage, reqMessage)
 	errClient := make(chan error, 1)
 	errBackend := make(chan error, 1)
-	go func() {
-		for {
-			msgType, msg, err := dstConn.ReadMessage()
-			if err != nil {
-				if _, ok := err.(*websocket.CloseError); ok {
-					//websocket.CloseAbnormalClosure is called when server process exits or websocket.close() is called
-					fmt.Println("\n\033[31mServer connection closed\033[00m")
-					errClient <- err
-					log.Println(err)
-					reqMessage := &RequestMessage{
-						RequestId:     message.ID,
-						Token:         c.token,
-						Status:        -1, // -1 indicates backend ws connection closed
-						SocketMsgType: msgType,
-						Body:          []byte("connection closed"),
-					}
-					c.WriteMessage(websocket.CloseMessage, reqMessage)
-					break
-				}
-				log.Println("err")
-				continue
-			}
-			reqMessage = &RequestMessage{
-				RequestId:     message.ID,
-				Token:         c.token,
-				SocketMsgType: msgType,
-				Body:          msg,
-			}
-			err = c.WriteMessage(websocket.BinaryMessage, reqMessage)
-			if err != nil {
-				errClient <- err
-				log.Println(err)
-				break
-			}
-		}
-
-	}()
-	go func() {
-		for message = range c.socketTracker[socketId] {
-			if message.Status == -1 {
-				errBackend <- errors.New("connection closed")
-			}
-			err = dstConn.WriteMessage(message.SocketMsgType, message.Body)
-			if err != nil {
-				log.Println(err)
-				break
-			}
-		}
-
-	}()
+	go c.writeDst(dstConn, message, errBackend)
+	go c.readDst(dstConn, message, errClient)
 	{
 		var message string
 		select {
@@ -194,8 +193,9 @@ func (c *Client) wsProcess(message *ResponseMessage) {
 	}
 }
 func (c *Client) process(message *ResponseMessage) {
-	jar, _ := cookiejar.New(&cookiejar.Options{})
 	website, _ := url.Parse(JoinURL(c.dstUrl, message.URL))
+
+	jar, _ := cookiejar.New(&cookiejar.Options{})
 	jar.SetCookies(
 		website,
 		message.Cookie,
@@ -203,11 +203,9 @@ func (c *Client) process(message *ResponseMessage) {
 	client := http.Client{
 		Jar: jar,
 	}
-
 	req, _ := http.NewRequest(message.Method, JoinURL(c.dstUrl, message.URL), bytes.NewBuffer(message.Body))
 	req.Host = c.host
 	req.Header = message.Header
-
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err)
@@ -217,6 +215,10 @@ func (c *Client) process(message *ResponseMessage) {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return
+	}
+
+	{
+		PrettyPrintRequest(resp.StatusCode, message.Method, website.Path)
 	}
 	reqMessage := &RequestMessage{
 		RequestId: message.ID,
