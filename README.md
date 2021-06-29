@@ -2,7 +2,7 @@
 
 ## Get Your Localhost Online and HTTPS
 
-### **Note** this client doesn't work with the original [jprq.io](https://github.com/azimjohn/jprq/) server (i.e open.jprq.live)
+#### **Note**: this client doesn't work with the original [jprq.io](https://github.com/azimjohn/jprq/) server (i.e open.jprq.live)
 
 ## How JPRQ is different from Ngrok?
 
@@ -42,8 +42,11 @@ Replace `subdomain` with a subdomain you want
 $ jprq -port 8000 -subdomain=subdomain -host example.com
 ```
 
-# Deploy your own jprq tunnel server
+## Deploy your own jprq tunnel server
 You have to deploy your own tunnel server for the client to work. Visit [jprq.io](https://github.com/unique1o1/jprq.io)
+
+## what's New
+- websocket support added (fire up your jupyter notebook no time)
 
 ## How JPRQ Works
 
