@@ -57,7 +57,6 @@ You have to deploy your own tunnel server for the client to work. Visit [jprq.io
 
 ## Limitations
 
-- Cannot expose WebSocket
 - Doesn't work with HTTP Polling
 
 ## Troubleshooting
