@@ -29,7 +29,7 @@ $ sudo mv ./jprq /usr/local/bin
 Replace 8000 with the port you want to expose and replace host with your tunnel server domain
 
 ```
-$ jprq-go-client -port  8000 -host example.com
+$ jprq -port  8000 -host example.com
 ```
 
 Press Ctrl+C to stop it
