@@ -46,7 +46,7 @@ $ jprq -port 8000 -subdomain=subdomain -host example.com
 You have to deploy your own tunnel server for the client to work. Visit [jprq.io](https://github.com/unique1o1/jprq.io)
 
 ## what's New
-- websocket support added (fire up your jupyter notebook no time)
+- websocket support added (fire up your jupyter notebook in no time)
 
 ## How JPRQ Works
 
