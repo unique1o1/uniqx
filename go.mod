@@ -1,5 +1,4 @@
-module github.com/unique1o1/jprq-go-client
-
+module github.com/unique1o1/jprq
 go 1.16
 
 require (
