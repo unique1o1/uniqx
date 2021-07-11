@@ -16,7 +16,7 @@
 
 ### Using Go
 ```bash
-$ go install github.com/unique1o1/jprq
+$ go install github.com/unique1o1/jprq@main
 ```
 ## Using pre-built binary
 Replace link with the release of your platforms binary
