@@ -9,9 +9,13 @@ import (
 	"syscall"
 )
 
+const VERSION = "v1.1.3"
+
 var port = flag.String("port", "", "Port number of the local server")
 var subdomain = flag.String("subdomain", "", "Name for Sub-domain")
 var host = flag.String("host", "", "Host of the remote tunnel server")
+
+var version = flag.Bool("version", false, "Show binary's version")
 
 func init() {
 	flag.Parse()
@@ -19,6 +23,7 @@ func init() {
 
 }
 func main() {
+
 	go func() {
 		//Setup our Ctrl+C handler
 		c := make(chan os.Signal)
@@ -29,6 +34,10 @@ func main() {
 			os.Exit(0)
 		}()
 	}()
+	if *version {
+		fmt.Println("Version: ", VERSION)
+		return
+	}
 	if *port == "" {
 		fmt.Println("Please specify argument port i.e -port 8000")
 		return

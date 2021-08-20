@@ -21,10 +21,12 @@ func keepAlive(ws *Socket, timeout time.Duration) {
 		for {
 			err := ws.WriteMessage(websocket.PingMessage, []byte("ping"))
 			if err != nil {
+				fmt.Println("error pinging")
 				return
 			}
-			time.Sleep(timeout / 2)
+			time.Sleep(timeout)
 			if time.Since(lastResponse) > timeout {
+				fmt.Println("im closing connections bro")
 				ws.Close()
 				return
 			}
