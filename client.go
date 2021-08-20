@@ -88,7 +88,7 @@ func (c *Client) readDst(dstConn *Socket, message *ResponseMessage, errClient ch
 		if err != nil {
 			if _, ok := err.(*websocket.CloseError); ok {
 				//websocket.CloseAbnormalClosure is called when server process exits or websocket.close() is called
-				fmt.Println("\n\033[31mServer connection closed\033[00m")
+				fmt.Println("\n\033[31m Backend Server connection closed\033[00m")
 				errClient <- err
 				log.Println(err)
 				reqMessage := &RequestMessage{
@@ -101,7 +101,7 @@ func (c *Client) readDst(dstConn *Socket, message *ResponseMessage, errClient ch
 				c.WriteMessage(websocket.CloseMessage, reqMessage)
 				break
 			}
-			log.Println("err")
+			log.Println("err:", err)
 			continue
 		}
 		reqMessage := &RequestMessage{
@@ -163,7 +163,7 @@ func (c *Client) wsProcess(message *ResponseMessage) {
 	}
 	defer conn.Close()
 	dstConn := &Socket{Conn: conn}
-	keepAlive(dstConn, time.Second*15)
+	keepAlive(dstConn, time.Second*30)
 
 	reqMessage := &RequestMessage{
 		Header:    resp.Header,
@@ -202,6 +202,9 @@ func (c *Client) process(message *ResponseMessage) {
 	)
 	client := http.Client{
 		Jar: jar,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error { //stop following redirects
+			return http.ErrUseLastResponse
+		},
 	}
 	req, _ := http.NewRequest(message.Method, JoinURL(c.dstUrl, message.URL), bytes.NewBuffer(message.Body))
 	req.Host = c.host
