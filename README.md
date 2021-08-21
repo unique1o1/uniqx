@@ -16,12 +16,12 @@
 
 ### Using Go
 ```bash
-$ go install github.com/unique1o1/jprq@main
+$ go install github.com/unique1o1/jprq@latest
 ```
 ## Using pre-built binary
 Replace link with the release of your platforms binary
 ```bash
-$ curl -fsSL https://github.com/unique1o1/jprq/releases/download/v1.1.1/jprq_linux_amd64.tar.gz > jprq_linux_amd64.tar.gz && tar -xvf jprq_linux_amd64.tar.gz
+$ curl -fsSL curl -fsSL https://github.com/unique1o1/jprq/releases/latest/download/<filename>.tar.gz > jprq.tar.gz && tar -xvf jprq.tar.gz
 $ sudo mv ./jprq /usr/local/bin
 ```
 ## How to use
@@ -50,7 +50,7 @@ You have to deploy your own tunnel server for the client to work. Visit [jprq.io
 
 ## How JPRQ Works
 
-<img width="100%" src="https://i.imgur.com/1kXPzyd.png">
+<img alt width="100%" src="https://i.imgur.com/1kXPzyd.png">
 
 ---
 
