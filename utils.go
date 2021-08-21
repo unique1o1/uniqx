@@ -13,7 +13,6 @@ import (
 func keepAlive(ws *Socket, timeout time.Duration) {
 	lastResponse := time.Now()
 	ws.SetPongHandler(func(msg string) error {
-		//log.Println("pong..")
 		lastResponse = time.Now()
 		return nil
 	})
@@ -21,12 +20,11 @@ func keepAlive(ws *Socket, timeout time.Duration) {
 		for {
 			err := ws.WriteMessage(websocket.PingMessage, []byte("ping"))
 			if err != nil {
-				fmt.Println("error pinging")
 				return
 			}
 			time.Sleep(timeout)
 			if time.Since(lastResponse) > timeout {
-				fmt.Println("im closing connections bro")
+				fmt.Println("\n\033[31m Peer didn't respond with a pong Closing Connections\033[00m")
 				ws.Close()
 				return
 			}
