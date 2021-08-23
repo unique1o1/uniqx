@@ -43,7 +43,7 @@ func main() {
 		return
 	}
 	if *host == "" {
-		fmt.Println("Please specify argument baseUrl i.e -baseUrl example.com")
+		fmt.Println("Please specify argument host i.e -host example.com")
 		return
 	}
 	fmt.Printf("\033[34m \nPress Ctrl+C to quit.\n")
