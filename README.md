@@ -24,10 +24,8 @@ You have to deploy your own tunnel server for the client to work. Visit [jprq.io
 $ go install github.com/unique1o1/jprq@latest
 ```
 ## Using pre-built binary
-Replace link with the release of your platforms binary
 ```bash
-$ curl -fsSL curl -fsSL https://github.com/unique1o1/jprq/releases/latest/download/<filename>.tar.gz > jprq.tar.gz && tar -xvf jprq.tar.gz
-$ sudo mv ./jprq /usr/local/bin
+$ curl -f https://raw.githubusercontent.com/unique1o1/jprq/main/install.sh | sudo sh
 ```
 ## How to use
 
