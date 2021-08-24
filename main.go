@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/pterm/pterm"
+	"github.com/unique1o1/jprq/pkg/utils"
 	"log"
 	"os"
 	"os/signal"
@@ -47,6 +49,16 @@ func main() {
 		return
 	}
 	fmt.Printf("\033[34m \nPress Ctrl+C to quit.\n")
-	openTunnel()
+	initializeHeader()
+	Serve(openTunnel())
+
+}
+
+func initializeHeader() {
+	// Generate BigLetters
+	utils.ClearConsole()
+	p, _ := pterm.DefaultBigText.WithLetters(pterm.NewLettersFromString("JPRQ")).Srender()
+	pterm.DefaultCenter.Println(p) // Print BigLetters with the default CenterPrinter
+	pterm.DefaultCenter.WithCenterEachLineSeparately().Println("Get Your Localhost Online")
 
 }

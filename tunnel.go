@@ -4,80 +4,89 @@ import (
 	"fmt"
 	"github.com/gofrs/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/pterm/pterm"
+	"github.com/unique1o1/jprq/client"
+	"github.com/unique1o1/jprq/client/model"
+	"github.com/unique1o1/jprq/pkg/socket"
+	"github.com/unique1o1/jprq/pkg/utils"
+	"gopkg.in/mgo.v2/bson"
 	"log"
 	"net/url"
 	"os"
-	"os/user"
-	"time"
 )
 
-func getParams() string {
-	params := url.Values{}
-	params.Add("username",
-		func() string {
-			if *subdomain == "" {
-				username, _ := user.Current()
-				return username.Username
-			}
-			return *subdomain
-		}())
-	return params.Encode()
-}
-func openTunnel() {
+func ReadHandshakeMessage(conn *websocket.Conn) (*model.HandshakeResponseMessage, error) {
+	resp := new(model.HandshakeResponseMessage)
+	_, message, err := conn.ReadMessage()
+	if err != nil {
+		return nil, err
+	}
+	err = bson.Unmarshal(message, resp)
+	if err != nil {
+		return nil, err
 
-	u := url.URL{Scheme: "wss", Host: *host, Path: "/_ws/", RawQuery: getParams()}
-	fmt.Printf("\u001B[34mConnecting to %s \n\n", u.String())
-	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	}
+	return resp, nil
+}
+func openTunnel() *client.JPRQClient {
+
+	u := url.URL{Scheme: "wss", Host: *host, Path: "/_ws/", RawQuery: utils.GetParams(*subdomain)}
+	pterm.DefaultCenter.Println(pterm.Green("Connecting to Tunnel Server"))
+	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 
 	if err != nil {
 		fmt.Println("dial:", err)
 		os.Exit(0)
 	}
 
-	defer c.Close()
-
-	message, err := ReadHandshakeMessage(c)
+	message, err := ReadHandshakeMessage(conn)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	//fmt.Printf("\u001B[31m Your are now online at: https://%s \n\n", message.Host)
-	fmt.Printf("\033[32m%-25s Online\033[00m \n", "Tunnel Status")
-	fmt.Printf("%-25s https://%s -> http://127.0.0.1:%s\n", "Forwarded", message.Host, *port)
-	fmt.Printf("%-25s http://%s -> http://127.0.0.1:%s \n\n", "Forwarded", message.Host, *port)
-	client := &Client{
-		dstUrl:        fmt.Sprintf("http://127.0.0.1:%s", *port),
-		dstWSUrl:      fmt.Sprintf("ws://127.0.0.1:%s", *port),
-		host:          message.Host,
-		token:         message.Token,
-		conn:          &Socket{Conn: c},
-		socketTracker: make(map[uuid.UUID]chan *ResponseMessage),
-	}
-	//keepAlive(client.conn, time.Minute)
-	c.SetCloseHandler(func(code int, text string) error {
-		message := websocket.FormatCloseMessage(code, "")
-		c.WriteControl(websocket.CloseMessage, message, time.Now().Add(time.Second))
-		return nil
-	})
 
+	pterm.DefaultCenter.Println(pterm.Green("Connected to Tunnel Server"))
+
+	t := pterm.DefaultTable.WithBoxed().WithHasHeader().WithData(pterm.TableData{
+		{pterm.Green("Tunnel Status"), pterm.Green("Online")},
+		{pterm.White("Forwarded"), pterm.White(fmt.Sprintf("https://%s -> http://127.0.0.1:%s", message.Host, *port))},
+		{pterm.White("Forwarded"), pterm.White(fmt.Sprintf("http://%s -> http://127.0.0.1:%s", message.Host, *port))},
+	})
+	utils.NewCTablePrinter(t).Render()
+
+	return &client.JPRQClient{
+		DstUrl:        fmt.Sprintf("http://127.0.0.1:%s", *port),
+		DstWSUrl:      fmt.Sprintf("ws://127.0.0.1:%s", *port),
+		Host:          message.Host,
+		Token:         message.Token,
+		Conn:          &socket.Socket{Conn: conn},
+		SocketTracker: make(map[uuid.UUID]chan *model.ResponseMessage),
+	}
+
+}
+
+func Serve(c *client.JPRQClient) {
+	defer c.Conn.Close()
 	for {
-		message, err := ReadMessage(c)
+		message, err := c.ReadMessage()
 		if err != nil {
 			if _, ok := err.(*websocket.CloseError); ok {
-				fmt.Println("\n\033[31mServer connection closed\033[00m")
+				pterm.DefaultCenter.Print(pterm.Red("Server connection closed"))
 				break
 			}
 			log.Println(err)
 			break
 		}
 		if value, ok := message.Header["Upgrade"]; ok && (value[0] == "websocket") {
-			ch := make(chan *ResponseMessage)
-			client.socketTracker[message.ID] = ch
-			go client.wsProcess(message)
-		} else if ch, ok := client.socketTracker[message.ID]; ok {
+			// establish new websocket connection
+			ch := make(chan *model.ResponseMessage)
+			c.SocketTracker[message.ID] = ch
+			go c.WebsocketRequestListener(message)
+		} else if ch, ok := c.SocketTracker[message.ID]; ok {
+			// send model for  existing websocket connection to its own channel
 			ch <- message
 		} else {
-			go client.process(message)
+			go c.HTTPRequestListener(message)
 		}
 	}
 }
