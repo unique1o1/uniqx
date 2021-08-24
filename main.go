@@ -9,7 +9,7 @@ import (
 	"syscall"
 )
 
-const VERSION = "v1.1.2"
+const VERSION = "v1.1.3"
 
 var port = flag.String("port", "", "Port number of the local server")
 var subdomain = flag.String("subdomain", "", "Name for Sub-domain")
