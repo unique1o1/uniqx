@@ -13,6 +13,9 @@ builds:
       - linux
       - windows
       - darwin
+
+    ldflags:
+      - -s -w -X "github.com/unique1o1/jprq/main.VERSION={{.Tag}}"
 archives:
   - replacements:
       darwin: Darwin
