@@ -21,7 +21,6 @@ func getParams() string {
 			}
 			return *subdomain
 		}())
-	params.Add("port", *port)
 	return params.Encode()
 }
 func openTunnel() {
