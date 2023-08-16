@@ -1,0 +1,18 @@
+[package]
+name = "client"
+version = "0.1.0"
+edition = "2021"
+[[bin]]
+name = "client"
+path = "src/main.rs"
+[dependencies]
+
+# crossbeam = { workspace = true }
+anyhow = { workspace = true }
+shared = { path = "../shared" }
+clap = { workspace = true }
+
+tracing = { workspace = true }
+tokio = { workspace = true }
+uuid = { workspace = true }
+tracing-subscriber = { workspace = true }
