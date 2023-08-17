@@ -29,10 +29,6 @@ pub struct TunnelRequest {
 
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct TunnelOpen {
-    pub hostname: Option<String>,
-    pub protocol: Option<String>,
-    pub public_port: Option<u16>,
-    // pub private_port: Option<u16>,
     pub error_message: Option<String>,
 }
 impl TunnelOpen {
@@ -43,8 +39,8 @@ impl TunnelOpen {
     }
 }
 #[derive(Serialize, Deserialize)]
-pub struct TunnelNewClient {
-    client_ip: IpAddr,
-    client_port: u16,
-    rate_limited: bool,
+pub struct NewClient {
+    // pub client_ip: IpAddr,
+    // pub client_port: u16,
+    pub identifier: String,
 }

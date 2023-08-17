@@ -1,12 +1,3 @@
-use std::time::Duration;
-
-use anyhow::{Context, Result};
-use tokio::{io::AsyncReadExt, net::TcpStream, time::timeout};
-
-pub mod events;
-pub mod frame;
-pub mod structs;
-pub mod utils;
 /// TCP port used for control connections with the server.
 pub const CONTROL_PORT: u16 = 7835;
 
@@ -17,7 +8,16 @@ pub const MAX_FRAME_LENGTH: usize = 256;
 pub const NETWORK_TIMEOUT: Duration = Duration::from_secs(10);
 /// Port used for the server's TCP socket.
 pub const SERVER_PORT: u16 = 9876;
+pub const HTTP_EVENT_SERVER_PORT: u16 = 9875;
+use std::time::Duration;
 
+use anyhow::{Context, Result};
+use tokio::{io::AsyncReadExt, net::TcpStream, time::timeout};
+
+pub mod events;
+pub mod frame;
+pub mod structs;
+pub mod utils;
 pub async fn connect_with_timeout(to: &str, port: u16) -> Result<TcpStream> {
     match timeout(NETWORK_TIMEOUT, TcpStream::connect((to, port))).await {
         Ok(res) => res,

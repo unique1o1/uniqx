@@ -11,6 +11,7 @@ use tracing::trace;
 
 use crate::NETWORK_TIMEOUT;
 /// Transport stream with JSON frames delimited by null characters.
+#[derive(Debug)]
 pub struct Delimited<U>(Framed<U, BytesCodec>);
 
 impl<U: AsyncRead + AsyncWrite + Unpin> Delimited<U> {
@@ -56,6 +57,10 @@ impl<U: AsyncRead + AsyncWrite + Unpin> Delimited<U> {
         Ok(())
     }
 
+    // pub fn split(self) {
+    //     let inner = self.0.into_inner();
+    //     let a = inner.split();
+    // }
     // Consume this object, returning current buffers and the inner transport.
     // pub fn into_parts(self) -> FramedParts<U, AnyDelimiterCodec> {
     //     self.0.into_parts()

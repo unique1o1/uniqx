@@ -1,20 +1,20 @@
-use crate::{
-    event_server::{EventServer, Tunnel},
-    http_server::HttpServer,
-};
 use anyhow::{Ok, Result};
 use std::{collections::HashMap, sync::Arc};
-use tokio::sync::Mutex;
-use tracing::event;
+use tokio::sync::{Mutex, RwLock};
 
-#[derive(Default)]
-pub struct ServerContext {
-    pub http_tunnels: HashMap<String, Tunnel>, // client_conn: TcpListener,
-}
+use crate::{
+    tcp_server::{
+        event_server::EventServer, http_event_server::HttpEventServer, http_server::HttpServer,
+        tcp_listener::TcpServer,
+    },
+    tunnel::Tunnel,
+};
+pub(crate) type ServerContext = HashMap<String, Mutex<Tunnel>>;
+
 pub struct Server {
     domain: String,
 
-    server_context: Arc<Mutex<ServerContext>>,
+    server_context: Arc<RwLock<ServerContext>>,
     // tunnel: Tunnel,
     // httpServer: HttpServer,
 }
@@ -22,24 +22,24 @@ impl Server {
     pub async fn new(domain: String) -> Server {
         Server {
             domain: domain,
-            server_context: Arc::new(Mutex::new(ServerContext::default())),
+            server_context: Arc::new(RwLock::new(ServerContext::default())),
         }
     }
-    fn http_listen(self, http_server: HttpServer) {
-        let context: Arc<Mutex<ServerContext>> = self.server_context.clone();
-        tokio::spawn(async move {
-            http_server.listen(context).await.unwrap();
-        });
-    }
+    // fn http_listen(self, http_server: HttpServer) {
+    //     let context: Arc<RwLock<ServerContext>> = self.server_context.clone();
+    //     tokio::spawn(async move {
+    //         http_server.listen(context).await.unwrap();
+    //     });
+    // }
 
-    fn public_http_listen(self, http_server: HttpServer) {
-        let context = self.server_context.clone();
-        tokio::spawn(async move {
-            http_server.listen(context).await.unwrap();
-        });
-    }
-    // /// Start the server, listening for new connections.
-    fn listen(&self, event_server: EventServer) {
+    // fn public_http_listen(self, http_server: HttpServer) {
+    //     let context = self.server_context.clone();
+    //     tokio::spawn(async move {
+    //         http_server.listen(context).await.unwrap();
+    //     });
+    // }
+    // Start the server, listening for new connections.
+    fn listen<S: TcpServer + 'static>(&self, event_server: S) {
         let context = self.server_context.clone();
         tokio::spawn(async move {
             event_server.listen(context).await.unwrap();
@@ -48,7 +48,8 @@ impl Server {
 
     pub async fn start(self) -> Result<()> {
         self.listen(EventServer::new().await);
-        self.http_listen(HttpServer::new().await);
+        self.listen(HttpServer::new().await);
+        self.listen(HttpEventServer::new().await);
         // this.http_listen();
         Ok(())
     }
