@@ -20,6 +20,7 @@ tokio = { workspace = true }
 uuid.workspace = true
 
 tracing-subscriber = { workspace = true }
+dashmap = { workspace = true }
 
 tracing = { workspace = true }
 ctrlc = "3.4.0"

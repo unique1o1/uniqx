@@ -32,7 +32,7 @@ use uniq::*;
 async fn run(args: Args) -> Result<()> {
     let mut uniq_client = UniqClient::new(args).await?;
 
-    uniq_client.start().await?;
+    uniq_client.start().await;
     Ok(())
 }
 fn main() -> Result<()> {

@@ -2,6 +2,7 @@
 members = ["server", "client", "shared"]
 
 [workspace.dependencies]
+dashmap = { version = "5.5.0" }
 # crossbeam = "0.8"
 anyhow = { version = "1.0.72", feaures = ["std"] }
 clap = { version = "4.3.21", features = ["derive", "env"] }

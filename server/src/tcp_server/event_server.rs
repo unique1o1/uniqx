@@ -1,24 +1,16 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use futures::executor::block_on;
+use shared::frame::{DelimitedRead, DelimitedWrite};
 use shared::utils::DeferCall;
 use shared::{
     defer,
-    frame::Delimited,
     structs::{Protocol, TunnelOpen, TunnelRequest},
     utils::validate_subdomain,
     SERVER_PORT,
 };
-use std::{sync::Arc, time::Duration};
-use tokio::sync::RwLock;
-use tokio::{
-    net::{TcpListener, TcpStream},
-    sync::Mutex,
-    time::sleep,
-};
-use tracing::{error, info, info_span, trace, warn, Instrument};
+use std::sync::Arc;
+use tokio::net::{TcpListener, TcpStream};
 
-use crate::tcp_server::tcp_listener::TcpServer;
 use crate::tunnel::Tunnel;
 use crate::uniq::ServerContext;
 
@@ -35,51 +27,41 @@ impl TCPListener for EventServer {
 }
 #[async_trait]
 impl EventHandler for EventServer {
-    async fn handle_conn(
-        &self,
-        stream: TcpStream,
-        mut context: Arc<RwLock<ServerContext>>,
-    ) -> Result<()> {
-        stream.split()
-        let t: Tunnel = Tunnel {
-            event_conn: Some(Arc::new(Mutex::new(Delimited::new(stream)))),
-            ..Default::default()
-        };
-        let stream = t.event_conn.clone().unwrap();
-        let data: TunnelRequest = stream.lock().await.recv().await?;
+    async fn handle_conn(&self, stream: TcpStream, context: Arc<ServerContext>) -> Result<()> {
+        // let mut inner = self.0.into_inner();
+        let (a, b) = tokio::io::split(stream);
+        let (mut read, mut write) = (DelimitedRead::new(a), DelimitedWrite::new(b));
+
+        let data: TunnelRequest = read.recv().await?;
         if let Err(msg) = validate_subdomain(&data.subdomain) {
             let data: TunnelOpen = TunnelOpen::with_error(msg);
-            stream.lock().await.send(data).await?;
+            write.send(data).await?;
         }
+
         match data.protocol {
             Protocol::HTTP => {
-                stream
-                    .lock()
-                    .await
+                write
                     .send(TunnelOpen {
                         error_message: None,
                     })
                     .await?;
 
-                context
-                    .write()
-                    .await
-                    .insert(data.subdomain.clone(), t.into());
-                // defer! {
-                //      block_on( context.write())
-                //    .remove(&data.subdomain)
-                // }
-
-                loop {
-                    stream.lock().await.recv().await?
+                context.insert(
+                    data.subdomain.clone(),
+                    Tunnel::with_event_conn(write).into(),
+                );
+                defer! {
+                    context
+                   .remove(&data.subdomain)
                 }
-                // let tunnel = HttpTunnel::new(data.subdomain, data.port, stream).await?;
+                loop {
+                    read.recv().await?;
+                }
             }
             Protocol::TCP => {
                 todo!()
             }
         }
-        // Ok(())
     }
 }
 
@@ -89,4 +71,4 @@ impl EventServer {
         Self { listener: listener }
     }
 }
-impl TcpServer for EventServer {}
+// impl TcpServer for EventServer {}

@@ -1,6 +1,7 @@
 use anyhow::{Ok, Result};
-use std::{collections::HashMap, sync::Arc};
-use tokio::sync::{Mutex, RwLock};
+use dashmap::DashMap;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 use crate::{
     tcp_server::{
@@ -9,12 +10,12 @@ use crate::{
     },
     tunnel::Tunnel,
 };
-pub(crate) type ServerContext = HashMap<String, Mutex<Tunnel>>;
+pub(crate) type ServerContext = DashMap<String, Mutex<Tunnel>>;
 
 pub struct Server {
     domain: String,
 
-    server_context: Arc<RwLock<ServerContext>>,
+    server_context: Arc<ServerContext>,
     // tunnel: Tunnel,
     // httpServer: HttpServer,
 }
@@ -22,7 +23,7 @@ impl Server {
     pub async fn new(domain: String) -> Server {
         Server {
             domain: domain,
-            server_context: Arc::new(RwLock::new(ServerContext::default())),
+            server_context: Arc::new(ServerContext::default()),
         }
     }
     // fn http_listen(self, http_server: HttpServer) {

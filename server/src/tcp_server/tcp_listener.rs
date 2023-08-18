@@ -14,20 +14,18 @@ pub trait TCPListener {
 }
 #[async_trait]
 pub trait EventHandler {
-    async fn handle_conn(
-        &self,
-        stream: TcpStream,
-        context: Arc<RwLock<ServerContext>>,
-    ) -> Result<()>;
+    async fn handle_conn(&self, stream: TcpStream, context: Arc<ServerContext>) -> Result<()>;
 }
 
 #[async_trait]
 pub trait EventListener: TCPListener + EventHandler {
-    async fn listen(self, context: Arc<RwLock<ServerContext>>) -> Result<()>;
+    async fn listen(self, context: Arc<ServerContext>) -> Result<()>;
 }
+/// Blanket implementation for all types that implement `TCPListener` and `EventHandler`.
 #[async_trait]
+
 impl<T: TCPListener + EventHandler + Send + Sync + 'static> EventListener for T {
-    async fn listen(self, context: Arc<RwLock<ServerContext>>) -> Result<()> {
+    async fn listen(self, context: Arc<ServerContext>) -> Result<()> {
         let self_clone = Arc::new(self);
         loop {
             let this = self_clone.clone();
@@ -55,4 +53,7 @@ impl<T: TCPListener + EventHandler + Send + Sync + 'static> EventListener for T 
     }
 }
 
+/// A trait for types that can be used as a TCP server.
 pub trait TcpServer: EventListener + EventHandler + TCPListener + Send + Sync {}
+/// Blanket implementation for all types that implement `EventListener`.
+impl<T: EventListener + Send + Sync + 'static> TcpServer for T {}

@@ -1,18 +1,27 @@
+use dashmap::DashMap;
+use shared::frame::DelimitedWrite;
 use std::{collections::HashMap, sync::Arc};
-
-use shared::frame::Delimited;
 use tokio::{
+    io::{ReadHalf, WriteHalf},
     net::TcpStream,
-    sync::{Mutex, RwLock},
+    sync::Mutex,
 };
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct Tunnel {
-    pub event_conn: Option<Arc<Mutex<Delimited<TcpStream>>>>,
-    pub private_http_conn: Option<Arc<Mutex<TcpStream>>>,
-    pub public_http_conn: Arc<Mutex<HashMap<String, TcpStream>>>,
+    pub event_conn: Arc<Mutex<DelimitedWrite>>,
+    pub public_http_conn: Arc<DashMap<String, TcpStream>>,
+    pub initialBuffer: Arc<DashMap<String, Vec<u8>>>,
 }
-
+impl Tunnel {
+    pub(crate) fn with_event_conn(write: DelimitedWrite) -> Self {
+        Tunnel {
+            event_conn: Arc::new(Mutex::new(write)),
+            public_http_conn: Default::default(),
+            initialBuffer: Default::default(),
+        }
+    }
+}
 impl From<Tunnel> for Arc<Mutex<Tunnel>> {
     fn from(tunnel: Tunnel) -> Arc<Mutex<Tunnel>> {
         Arc::new(Mutex::new(tunnel))

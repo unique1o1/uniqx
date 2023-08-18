@@ -40,44 +40,35 @@ impl HttpServer {
 }
 #[async_trait]
 impl EventHandler for HttpServer {
-    async fn handle_conn(
-        &self,
-        mut stream: TcpStream,
-        context: Arc<RwLock<ServerContext>>,
-    ) -> Result<()> {
+    async fn handle_conn(&self, mut stream: TcpStream, context: Arc<ServerContext>) -> Result<()> {
+        info!("new http connection");
         let identifier = Uuid::new_v4().to_string();
         let Ok(( subdomain, buffer )) = parse_host(&mut stream).await else{
                 write_response(stream, 400,"Bad Request", "Bad Request").await?;
                 return Err(Error::msg("parse host error"));
         };
-        println!("subdomain: {}", subdomain);
-        // stream.write(b"HTTP/1.1 200 Success\r\n\r\n").await.unwrap();
-        let context_lock = context.read().await;
-        let t = if let Some(t) = context_lock.get(&subdomain) {
-            t
-        } else {
-            write_response(stream, 404, "Not Found", "tunnel not found").await?;
-            return Ok(());
+        let t = match context.get(&subdomain) {
+            Some(t) => t,
+            None => {
+                write_response(stream, 404, "Not Found", "tunnel not found").await?;
+                return Ok(());
+            }
         };
+
+        info!("new1 http connection {}", identifier);
         let t = t.lock().await;
 
-        t.public_http_conn
-            .lock()
-            .await
-            .insert(identifier.clone(), stream);
+        t.public_http_conn.insert(identifier.clone(), stream);
+        info!("new http connection {}", identifier);
         t.event_conn
-            .clone()
-            .unwrap()
             .lock()
             .await
             .send(NewClient {
-                identifier: identifier,
-                // data: buffer,
+                identifier: identifier.clone(),
+                subdomain: subdomain.clone(),
             })
             .await?;
-        info!("new client: ---",);
-        // tunnel.public_http_conn = Some(Arc::new(Mutex::new(stream)));
-        // context.write().await.insert(subdomain.clone(), tunnel);
+        t.initialBuffer.insert(identifier.clone(), buffer);
         Ok(())
     }
 }
@@ -87,4 +78,4 @@ impl TCPListener for HttpServer {
         &self.listener
     }
 }
-impl TcpServer for HttpServer {}
+// impl TcpServer for HttpServer {}

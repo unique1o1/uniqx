@@ -1,6 +1,6 @@
 use anyhow::Result;
 use regex::Regex;
-use tokio::io::AsyncWriteExt;
+use tokio::io::{self, AsyncRead, AsyncWrite, AsyncWriteExt};
 static BLOCK_LIST: &[&str] = &["www", "uniq"];
 pub fn validate_subdomain(subdomain: &str) -> Result<(), String> {
     let regex = Regex::new(r"^[a-z\d](?:[a-z\d]|-[a-z\d]){0,38}$").unwrap();
@@ -50,5 +50,19 @@ pub async fn write_response(
     );
     conn.write_all(response.as_bytes()).await?;
     conn.flush().await?;
+    Ok(())
+}
+/// Copy data mutually between two read/write streams.
+pub async fn proxy<S1, S2>(stream1: S1, stream2: S2) -> io::Result<()>
+where
+    S1: AsyncRead + AsyncWrite + Unpin,
+    S2: AsyncRead + AsyncWrite + Unpin,
+{
+    let (mut s1_read, mut s1_write) = io::split(stream1);
+    let (mut s2_read, mut s2_write) = io::split(stream2);
+    tokio::select! {
+        res = io::copy(&mut s1_read, &mut s2_write) => res,
+        res = io::copy(&mut s2_read, &mut s1_write) => res,
+    }?;
     Ok(())
 }

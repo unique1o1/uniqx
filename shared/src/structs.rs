@@ -43,4 +43,5 @@ pub struct NewClient {
     // pub client_ip: IpAddr,
     // pub client_port: u16,
     pub identifier: String,
+    pub subdomain: String,
 }
