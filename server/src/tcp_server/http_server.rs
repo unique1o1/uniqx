@@ -41,7 +41,7 @@ impl HttpServer {
 #[async_trait]
 impl EventHandler for HttpServer {
     async fn handle_conn(&self, mut stream: TcpStream, context: Arc<ServerContext>) -> Result<()> {
-        info!("new http connection");
+        info!("=====new http connection=========");
         let identifier = Uuid::new_v4().to_string();
         let Ok(( subdomain, buffer )) = parse_host(&mut stream).await else{
                 write_response(stream, 400,"Bad Request", "Bad Request").await?;
@@ -55,11 +55,8 @@ impl EventHandler for HttpServer {
             }
         };
 
-        info!("new1 http connection {}", identifier);
-        let t = t.lock().await;
-
         t.public_http_conn.insert(identifier.clone(), stream);
-        info!("new http connection {}", identifier);
+        t.initialBuffer.insert(identifier.clone(), buffer);
         t.event_conn
             .lock()
             .await
@@ -68,7 +65,8 @@ impl EventHandler for HttpServer {
                 subdomain: subdomain.clone(),
             })
             .await?;
-        t.initialBuffer.insert(identifier.clone(), buffer);
+
+        println!("=====http connection exited=========");
         Ok(())
     }
 }

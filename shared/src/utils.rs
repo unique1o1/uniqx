@@ -1,6 +1,10 @@
 use anyhow::Result;
 use regex::Regex;
-use tokio::io::{self, AsyncRead, AsyncWrite, AsyncWriteExt};
+use tokio::{
+    io::{self, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, ReadHalf, WriteHalf},
+    net::TcpStream,
+};
+use tracing::info;
 static BLOCK_LIST: &[&str] = &["www", "uniq"];
 pub fn validate_subdomain(subdomain: &str) -> Result<(), String> {
     let regex = Regex::new(r"^[a-z\d](?:[a-z\d]|-[a-z\d]){0,38}$").unwrap();
@@ -30,6 +34,7 @@ macro_rules! defer {
     ($e:expr) => {
         let _scope_call = DeferCall {
             c: || -> () {
+                println!("deferred call");
                 $e;
             },
         };
@@ -65,4 +70,19 @@ where
         res = io::copy(&mut s2_read, &mut s1_write) => res,
     }?;
     Ok(())
+}
+
+pub async fn bind(mut src: ReadHalf<TcpStream>, mut dst: WriteHalf<TcpStream>) -> io::Result<()> {
+    let mut buf = [0; 4096];
+    loop {
+        let n = src.read(&mut buf).await?;
+        // if n == 0 {
+        //     eprintln!("<-------{:?} closed------>", src);
+        //     // flush()
+        //     break;
+        // }
+        dst.write_all(&buf[..n]).await?;
+        // std::thread::sleep(Duration::from_millis(10));
+    }
+    // Ok(())
 }

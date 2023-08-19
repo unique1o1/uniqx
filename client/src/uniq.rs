@@ -11,6 +11,7 @@ use shared::structs::NewClient;
 use shared::structs::Protocol;
 use shared::structs::TunnelOpen;
 use shared::structs::TunnelRequest;
+use shared::utils::bind;
 use shared::utils::proxy;
 use shared::HTTP_EVENT_SERVER_PORT;
 use shared::NETWORK_TIMEOUT;
@@ -19,6 +20,7 @@ use tokio::io;
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 use tokio::sync::OnceCell;
+use tokio::time;
 use tokio::time::timeout;
 use tracing::error;
 use tracing::info;
@@ -54,11 +56,16 @@ impl UniqClient {
         Delimited::new(&mut http_event_stream).send(data).await?;
         let (mut s1_read, mut s1_write) = io::split(localhost_conn);
         let (mut s2_read, mut s2_write) = io::split(http_event_stream);
+        // tokio::spawn(async move { bind(s1_read, s2_write).await.unwrap() });
+        // bind(s2_read, s1_write).await.unwrap();
         loop {
-            tokio::select! {
+            let Ok(n) = tokio::select! {
                 res = io::copy(&mut s1_read, &mut s2_write) => res,
                 res = io::copy(&mut s2_read, &mut s1_write) => res,
-            }?;
+            }else{continue};
+            if n > 0 {
+                info!("{} bytes copied", n);
+            }
         }
         // Ok(())
     }
@@ -89,6 +96,7 @@ impl UniqClient {
         loop {
             let data: NewClient = conn.recv().await.context("Connection timed out").unwrap();
             let this = this.clone();
+            time::sleep(Duration::from_millis(50)).await;
             tokio::spawn(async move {
                 this.handle_request(data).await.unwrap();
             });

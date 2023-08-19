@@ -10,7 +10,7 @@ use crate::{
     },
     tunnel::Tunnel,
 };
-pub(crate) type ServerContext = DashMap<String, Mutex<Tunnel>>;
+pub(crate) type ServerContext = DashMap<String, Tunnel>;
 
 pub struct Server {
     domain: String,
