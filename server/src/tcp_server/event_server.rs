@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use async_trait::async_trait;
 use shared::frame::{DelimitedRead, DelimitedWrite};
 use shared::utils::DeferCall;
@@ -55,7 +55,7 @@ impl EventHandler for EventServer {
                    .remove(&data.subdomain)
                 }
                 loop {
-                    read.recv().await?;
+                    read.recv().await.context("client disconnected")?;
                 }
             }
             Protocol::TCP => {

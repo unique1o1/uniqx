@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use std::sync::Arc;
 use tracing::info;
 
-use anyhow::{Error, Result};
+use anyhow::{Context, Error, Result};
 use shared::{frame::Delimited, structs::NewClient, utils::bind, HTTP_EVENT_SERVER_PORT};
 use tokio::{
     io::{self, AsyncReadExt, AsyncWriteExt, ReadHalf, WriteHalf},
@@ -40,6 +40,7 @@ impl EventHandler for HttpEventServer {
     async fn handle_conn(&self, mut stream: TcpStream, context: Arc<ServerContext>) -> Result<()> {
         info!("=======incoming http event connection======");
         let data: NewClient = Delimited::new(&mut stream).recv().await?;
+        println!("new client:{}", data.identifier);
         let t = match context.get(&data.subdomain) {
             Some(t) => t,
             None => {
@@ -47,13 +48,13 @@ impl EventHandler for HttpEventServer {
             }
         };
         let (_, public_http_conn) = t.public_http_conn.remove(&data.identifier).unwrap();
-        let buffer = t.initialBuffer.get(&data.identifier).unwrap();
-        println!("length: {}", buffer.len());
+        // let buffer = t.initial_buffer.get(&data.identifier).unwrap();
+        let buffer = data.initial_buffer;
         stream.write_all(&buffer).await?;
         let (s1_read, s1_write) = io::split(stream);
         let (s2_read, s2_write) = io::split(public_http_conn);
-        tokio::spawn(async move { bind(s1_read, s2_write).await.unwrap() });
-        bind(s2_read, s1_write).await.unwrap();
+        tokio::spawn(async move { bind(s1_read, s2_write).await.context("cant read from s1") });
+        bind(s2_read, s1_write).await.context("cant read from s2")?;
         println!("================http event connection exited===============");
         Ok(())
     }

@@ -40,7 +40,7 @@ impl<T: TCPListener + EventHandler + Send + Sync + 'static> EventListener for T 
             let context = context.clone();
             tokio::spawn(
                 async move {
-                    info!("incoming tunnel connection");
+                    // info!("incoming tunnel connection");
                     if let Err(err) = this.handle_conn(stream, context).await {
                         warn!(%err, "connection exited with error");
                     } else {

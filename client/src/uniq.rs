@@ -56,18 +56,18 @@ impl UniqClient {
         Delimited::new(&mut http_event_stream).send(data).await?;
         let (mut s1_read, mut s1_write) = io::split(localhost_conn);
         let (mut s2_read, mut s2_write) = io::split(http_event_stream);
-        // tokio::spawn(async move { bind(s1_read, s2_write).await.unwrap() });
-        // bind(s2_read, s1_write).await.unwrap();
-        loop {
-            let Ok(n) = tokio::select! {
-                res = io::copy(&mut s1_read, &mut s2_write) => res,
-                res = io::copy(&mut s2_read, &mut s1_write) => res,
-            }else{continue};
-            if n > 0 {
-                info!("{} bytes copied", n);
-            }
-        }
-        // Ok(())
+        tokio::spawn(async move { bind(s1_read, s2_write).await.context("cant read from s1") });
+        bind(s2_read, s1_write).await.context("cant read from s2")?;
+        // loop {
+        //     let Ok(n) = tokio::select! {
+        //         res = io::copy(&mut s1_read, &mut s2_write) => res,
+        //         res = io::copy(&mut s2_read, &mut s1_write) => res,
+        //     }else{continue};
+        //     // if n > 0 {
+        //     //     info!("{} bytes copied", n);
+        //     // }
+        // }
+        Ok(())
     }
 
     pub async fn start(mut self) -> ! {
@@ -94,9 +94,9 @@ impl UniqClient {
         );
         let this: Arc<UniqClient> = Arc::new(self);
         loop {
-            let data: NewClient = conn.recv().await.context("Connection timed out").unwrap();
+            let data: NewClient = conn.recv().await.unwrap();
+            println!("New connection from {}", data.identifier);
             let this = this.clone();
-            time::sleep(Duration::from_millis(50)).await;
             tokio::spawn(async move {
                 this.handle_request(data).await.unwrap();
             });

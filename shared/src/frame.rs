@@ -1,6 +1,6 @@
 //! Shared data structures, utilities, and protocol definitions.
 
-use std::io::Read;
+use std::io::{ErrorKind, Read};
 
 use anyhow::{Context, Error, Result};
 use bytes::{Buf, BufMut, BytesMut};
@@ -40,7 +40,7 @@ where
                 }
             }
         } else {
-            Err(Error::msg("no message received"))
+            panic!("no message received")
         }
     }
 

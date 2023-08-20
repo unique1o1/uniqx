@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Error, Result};
 use regex::Regex;
 use tokio::{
     io::{self, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, ReadHalf, WriteHalf},
@@ -72,15 +72,15 @@ where
     Ok(())
 }
 
-pub async fn bind(mut src: ReadHalf<TcpStream>, mut dst: WriteHalf<TcpStream>) -> io::Result<()> {
+pub async fn bind(mut src: ReadHalf<TcpStream>, mut dst: WriteHalf<TcpStream>) -> Result<()> {
     let mut buf = [0; 4096];
     loop {
         let n = src.read(&mut buf).await?;
-        // if n == 0 {
-        //     eprintln!("<-------{:?} closed------>", src);
-        //     // flush()
-        //     break;
-        // }
+        if n == 0 {
+            eprintln!("<-------{:?} closed------>", src);
+            // flush()
+            return Err(Error::msg("read 0 bytes")).context("server might be closed");
+        }
         dst.write_all(&buf[..n]).await?;
         // std::thread::sleep(Duration::from_millis(10));
     }

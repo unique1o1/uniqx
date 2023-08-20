@@ -1,4 +1,4 @@
-use anyhow::{Error, Result};
+use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
 use shared::{structs::NewClient, utils::write_response};
 use std::{collections::HashMap, sync::Arc};
@@ -56,17 +56,24 @@ impl EventHandler for HttpServer {
         };
 
         t.public_http_conn.insert(identifier.clone(), stream);
-        t.initialBuffer.insert(identifier.clone(), buffer);
+        eprintln!("&&&&&&&&&&&&&&&&&&&");
+        eprintln!("oiden:{}", identifier);
+
+        // t.initial_buffer.insert(identifier.clone(), buffer);
+        eprintln!("<<<<<locking>>>>>");
         t.event_conn
             .lock()
             .await
             .send(NewClient {
+                initial_buffer: buffer,
                 identifier: identifier.clone(),
                 subdomain: subdomain.clone(),
             })
-            .await?;
+            .await
+            .context("error while sending new client info to client")?;
 
-        println!("=====http connection exited=========");
+        eprintln!("<<<<<unlocked>>>>>");
+        // println!("=====http connection exited=========");
         Ok(())
     }
 }

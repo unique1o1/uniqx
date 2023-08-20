@@ -41,7 +41,7 @@ impl TunnelOpen {
 #[derive(Serialize, Deserialize)]
 pub struct NewClient {
     // pub client_ip: IpAddr,
-    // pub client_port: u16,
+    pub initial_buffer: Vec<u8>,
     pub identifier: String,
     pub subdomain: String,
 }
