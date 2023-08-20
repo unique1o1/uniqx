@@ -19,3 +19,4 @@ bytes = { version = "1.4.0", features = ["std"] }
 tracing = { workspace = true }
 regex = "1.9.3"
 clap = { workspace = true }
+serde_json = { workspace = true }

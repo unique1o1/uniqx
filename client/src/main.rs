@@ -30,7 +30,7 @@ use uniq::*;
 
 #[tokio::main]
 async fn run(args: Args) -> Result<()> {
-    let mut uniq_client = UniqClient::new(args).await?;
+    let uniq_client = UniqClient::new(args).await?;
 
     uniq_client.start().await;
     Ok(())

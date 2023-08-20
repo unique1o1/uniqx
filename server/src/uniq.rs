@@ -44,6 +44,7 @@ impl Server {
         let context = self.server_context.clone();
         tokio::spawn(async move {
             event_server.listen(context).await.unwrap();
+            println!("exiting listener");
         });
     }
 

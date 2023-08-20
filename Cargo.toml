@@ -17,3 +17,5 @@ uuid = { version = "1.4.1", features = ["serde", "v4"] }
 serde = { version = "1.0.183", features = ["derive"] }
 tracing = "0.1.37"
 tracing-subscriber = "0.3.17"
+
+serde_json = "1.0.105"

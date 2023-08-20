@@ -1,3 +1,4 @@
+use std::process::exit;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -58,15 +59,7 @@ impl UniqClient {
         let (mut s2_read, mut s2_write) = io::split(http_event_stream);
         tokio::spawn(async move { bind(s1_read, s2_write).await.context("cant read from s1") });
         bind(s2_read, s1_write).await.context("cant read from s2")?;
-        // loop {
-        //     let Ok(n) = tokio::select! {
-        //         res = io::copy(&mut s1_read, &mut s2_write) => res,
-        //         res = io::copy(&mut s2_read, &mut s1_write) => res,
-        //     }else{continue};
-        //     // if n > 0 {
-        //     //     info!("{} bytes copied", n);
-        //     // }
-        // }
+
         Ok(())
     }
 
@@ -83,7 +76,7 @@ impl UniqClient {
         let data: TunnelOpen = conn.recv_timeout().await.unwrap();
         if data.error_message.is_some() {
             error!("Error: {}", data.error_message.unwrap());
-            panic!("");
+            exit(1)
         }
         println!("Status: \t Online ");
         println!("Protocol: \t {:?}", self.protocol);
@@ -94,7 +87,10 @@ impl UniqClient {
         );
         let this: Arc<UniqClient> = Arc::new(self);
         loop {
+            println!("Waiting for new connection");
             let data: NewClient = conn.recv().await.unwrap();
+
+            println!("--o----");
             println!("New connection from {}", data.identifier);
             let this = this.clone();
             tokio::spawn(async move {

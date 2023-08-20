@@ -29,15 +29,22 @@ impl TCPListener for EventServer {
 impl EventHandler for EventServer {
     async fn handle_conn(&self, stream: TcpStream, context: Arc<ServerContext>) -> Result<()> {
         // let mut inner = self.0.into_inner();
+        println!("new socket event connection");
         let (a, b) = tokio::io::split(stream);
         let (mut read, mut write) = (DelimitedRead::new(a), DelimitedWrite::new(b));
 
+        println!("---wating for->---");
         let data: TunnelRequest = read.recv().await?;
         if let Err(msg) = validate_subdomain(&data.subdomain) {
             let data: TunnelOpen = TunnelOpen::with_error(msg);
             write.send(data).await?;
         }
-
+        if context.contains_key(&data.subdomain) {
+            let data: TunnelOpen = TunnelOpen::with_error("subdomain already in use".into());
+            write.send(data).await?;
+            return Ok(());
+        }
+        println!("---wating for----");
         match data.protocol {
             Protocol::HTTP => {
                 write
@@ -45,15 +52,21 @@ impl EventHandler for EventServer {
                         error_message: None,
                     })
                     .await?;
+                println!(
+                    "***********wating for----{:?}",
+                    context.get(&data.subdomain)
+                );
 
                 context.insert(
                     data.subdomain.clone(),
                     Tunnel::with_event_conn(write).into(),
                 );
+                println!("wating for----{:?}", context.get(&data.subdomain));
                 defer! {
                     context
                    .remove(&data.subdomain)
                 }
+
                 loop {
                     read.recv().await.context("client disconnected")?;
                 }

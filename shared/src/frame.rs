@@ -9,13 +9,13 @@ use serde::{de::DeserializeOwned, Serialize};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, ReadHalf, WriteHalf};
 use tokio::net::TcpStream;
 use tokio::time::timeout;
-use tokio_util::codec::{BytesCodec, Framed, FramedRead, FramedWrite};
+use tokio_util::codec::{AnyDelimiterCodec, BytesCodec, Framed, FramedRead, FramedWrite};
 use tracing::trace;
 
 use crate::NETWORK_TIMEOUT;
 /// Transport stream with JSON frames delimited by null characters.
 #[derive(Debug)]
-pub struct Delimited<U>(Framed<U, BytesCodec>);
+pub struct Delimited<U>(Framed<U, AnyDelimiterCodec>);
 
 impl<U> Delimited<U>
 where
@@ -23,7 +23,7 @@ where
 {
     /// Construct a new delimited stream.
     pub fn new(stream: U) -> Self {
-        let codec = BytesCodec::default();
+        let codec = AnyDelimiterCodec::new_with_max_length(vec![0], vec![0], 20000);
         Self(Framed::new(stream, codec))
     }
 
@@ -31,14 +31,9 @@ where
     pub async fn recv<T: DeserializeOwned>(&mut self) -> Result<T> {
         if let Some(next_message) = self.0.next().await {
             let byte_message = next_message.context("frame error, invalid byte length")?;
-
-            match bincode::deserialize_from(byte_message.reader()) {
-                Ok(msg) => Ok(msg),
-                Err(e) => {
-                    trace!("error deserializing message: {}", e);
-                    Err(e.into())
-                }
-            }
+            let serialized_obj =
+                serde_json::from_slice(&byte_message).context("unable to parse message")?;
+            Ok(serialized_obj)
         } else {
             panic!("no message received")
         }
@@ -57,9 +52,10 @@ where
     /// Send a null-terminated JSON instruction on a stream.
     pub async fn send<T: Serialize>(&mut self, msg: T) -> Result<()> {
         trace!("sending json message");
-        let mut writer = BytesMut::new().writer();
-        bincode::serialize_into(&mut writer, &msg)?;
-        self.0.send(writer.into_inner()).await?;
+        // let mut writer = BytesMut::new().writer();
+        // bincode::serialize_into(&mut writer, &msg)?;
+        self.0.send(serde_json::to_string(&msg)?).await?;
+        // self.0.send(writer.into_inner()).await?;
         Ok(())
     }
 
@@ -69,26 +65,27 @@ where
     // }
 }
 #[derive(Debug)]
-pub struct DelimitedWrite(pub FramedWrite<WriteHalf<TcpStream>, BytesCodec>);
+pub struct DelimitedWrite(pub FramedWrite<WriteHalf<TcpStream>, AnyDelimiterCodec>);
 
 impl DelimitedWrite {
     pub fn new(stream: WriteHalf<TcpStream>) -> Self {
-        let codec = BytesCodec::default();
+        let codec = AnyDelimiterCodec::new_with_max_length(vec![0], vec![0], 20000);
         Self(FramedWrite::new(stream, codec))
     }
     pub async fn send<T: Serialize>(&mut self, msg: T) -> Result<()> {
         trace!("sending json message");
         let mut writer: bytes::buf::Writer<BytesMut> = BytesMut::new().writer();
         bincode::serialize_into(&mut writer, &msg)?;
-        self.0.send(writer.into_inner()).await?;
+        // self.0.send(writer.into_inner()).await?;
+        self.0.send(serde_json::to_string(&msg)?).await?;
         Ok(())
     }
 }
 #[derive(Debug)]
-pub struct DelimitedRead(pub FramedRead<ReadHalf<TcpStream>, BytesCodec>);
+pub struct DelimitedRead(pub FramedRead<ReadHalf<TcpStream>, AnyDelimiterCodec>);
 impl DelimitedRead {
     pub fn new(stream: ReadHalf<TcpStream>) -> Self {
-        let codec = BytesCodec::default();
+        let codec = AnyDelimiterCodec::new_with_max_length(vec![0], vec![0], 20000);
         Self(FramedRead::new(stream, codec))
     }
     /// Read the next null-delimited JSON instruction, with a default timeout.
@@ -104,16 +101,11 @@ impl DelimitedRead {
     pub async fn recv<T: DeserializeOwned>(&mut self) -> Result<T> {
         if let Some(next_message) = self.0.next().await {
             let byte_message = next_message.context("frame error, invalid byte length")?;
-
-            match bincode::deserialize_from(byte_message.reader()) {
-                Ok(msg) => Ok(msg),
-                Err(e) => {
-                    trace!("error deserializing message: {}", e);
-                    Err(e.into())
-                }
-            }
+            let serialized_obj =
+                serde_json::from_slice(&byte_message).context("unable to parse message")?;
+            Ok(serialized_obj)
         } else {
-            Err(Error::msg("no message received"))
+            Err(Error::msg("Connection closed"))
         }
     }
 }
