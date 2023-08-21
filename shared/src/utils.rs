@@ -34,7 +34,6 @@ macro_rules! defer {
     ($e:expr) => {
         let _scope_call = DeferCall {
             c: || -> () {
-                println!("deferred call");
                 $e;
             },
         };
@@ -77,12 +76,8 @@ pub async fn bind(mut src: ReadHalf<TcpStream>, mut dst: WriteHalf<TcpStream>) -
     loop {
         let n = src.read(&mut buf).await?;
         if n == 0 {
-            eprintln!("<-------{:?} closed------>", src);
-            // flush()
             return Err(Error::msg("read 0 bytes")).context("server might be closed");
         }
         dst.write_all(&buf[..n]).await?;
-        // std::thread::sleep(Duration::from_millis(10));
     }
-    // Ok(())
 }

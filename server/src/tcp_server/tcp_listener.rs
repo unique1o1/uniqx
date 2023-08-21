@@ -26,22 +26,21 @@ pub trait EventListener: TCPListener + EventHandler {
 
 impl<T: TCPListener + EventHandler + Send + Sync + 'static> EventListener for T {
     async fn listen(self, context: Arc<ServerContext>) -> Result<()> {
-        let self_clone = Arc::new(self);
+        let this = Arc::new(self);
         loop {
-            let this = self_clone.clone();
+            let this = this.clone();
             let (stream, addr) = if let Ok(x) = this.listener().accept().await {
                 x
             } else {
                 error!("failed to accept connection");
                 continue;
             };
-            println!(":::::ckoneibg");
             let context = context.clone();
             tokio::spawn(
                 async move {
                     // info!("incoming tunnel connection");
                     if let Err(err) = this.handle_conn(stream, context).await {
-                        warn!(%err, "connection exited with error");
+                        println!("connection exited with error:{}", err);
                     } else {
                         info!("connection exited");
                     }

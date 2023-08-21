@@ -7,6 +7,7 @@ use shared::{frame::Delimited, structs::NewClient, utils::bind, HTTP_EVENT_SERVE
 use tokio::{
     io::{self, AsyncReadExt, AsyncWriteExt, ReadHalf, WriteHalf},
     net::{TcpListener, TcpStream},
+    task::JoinSet,
 };
 
 use crate::uniq::ServerContext;
@@ -38,9 +39,7 @@ impl TCPListener for HttpEventServer {
 #[async_trait]
 impl EventHandler for HttpEventServer {
     async fn handle_conn(&self, mut stream: TcpStream, context: Arc<ServerContext>) -> Result<()> {
-        info!("=======incoming http event connection======");
         let data: NewClient = Delimited::new(&mut stream).recv().await?;
-        println!("new client:{}", data.identifier);
         let t = match context.get(&data.subdomain) {
             Some(t) => t,
             None => {
@@ -48,14 +47,18 @@ impl EventHandler for HttpEventServer {
             }
         };
         let (_, public_http_conn) = t.public_http_conn.remove(&data.identifier).unwrap();
-        // let buffer = t.initial_buffer.get(&data.identifier).unwrap();
+        drop(t);
         let buffer = data.initial_buffer;
         stream.write_all(&buffer).await?;
         let (s1_read, s1_write) = io::split(stream);
         let (s2_read, s2_write) = io::split(public_http_conn);
-        tokio::spawn(async move { bind(s1_read, s2_write).await.context("cant read from s1") });
-        bind(s2_read, s1_write).await.context("cant read from s2")?;
-        println!("================http event connection exited===============");
+        let mut set = JoinSet::new();
+
+        set.spawn(async move { bind(s1_read, s2_write).await.context("cant read from s1") });
+
+        set.spawn(async move { bind(s2_read, s1_write).await.context("cant read from s2") });
+        set.join_next().await;
+        set.abort_all();
         Ok(())
     }
 }

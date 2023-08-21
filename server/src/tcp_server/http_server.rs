@@ -41,7 +41,6 @@ impl HttpServer {
 #[async_trait]
 impl EventHandler for HttpServer {
     async fn handle_conn(&self, mut stream: TcpStream, context: Arc<ServerContext>) -> Result<()> {
-        info!("=====new http connection=========");
         let identifier = Uuid::new_v4().to_string();
         let Ok(( subdomain, buffer )) = parse_host(&mut stream).await else{
                 write_response(stream, 400,"Bad Request", "Bad Request").await?;
@@ -54,13 +53,7 @@ impl EventHandler for HttpServer {
                 return Ok(());
             }
         };
-
         t.public_http_conn.insert(identifier.clone(), stream);
-        eprintln!("&&&&&&&&&&&&&&&&&&&");
-        eprintln!("oiden:{}", identifier);
-
-        // t.initial_buffer.insert(identifier.clone(), buffer);
-        eprintln!("<<<<<locking>>>>>");
         t.event_conn
             .lock()
             .await
@@ -72,8 +65,6 @@ impl EventHandler for HttpServer {
             .await
             .context("error while sending new client info to client")?;
 
-        eprintln!("<<<<<unlocked>>>>>");
-        // println!("=====http connection exited=========");
         Ok(())
     }
 }

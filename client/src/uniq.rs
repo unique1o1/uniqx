@@ -55,8 +55,8 @@ impl UniqClient {
         let mut http_event_stream =
             connect_with_timeout(&self.remote_host, HTTP_EVENT_SERVER_PORT).await?;
         Delimited::new(&mut http_event_stream).send(data).await?;
-        let (mut s1_read, mut s1_write) = io::split(localhost_conn);
-        let (mut s2_read, mut s2_write) = io::split(http_event_stream);
+        let (s1_read, s1_write) = io::split(localhost_conn);
+        let (s2_read, s2_write) = io::split(http_event_stream);
         tokio::spawn(async move { bind(s1_read, s2_write).await.context("cant read from s1") });
         bind(s2_read, s1_write).await.context("cant read from s2")?;
 
@@ -89,9 +89,6 @@ impl UniqClient {
         loop {
             println!("Waiting for new connection");
             let data: NewClient = conn.recv().await.unwrap();
-
-            println!("--o----");
-            println!("New connection from {}", data.identifier);
             let this = this.clone();
             tokio::spawn(async move {
                 this.handle_request(data).await.unwrap();
