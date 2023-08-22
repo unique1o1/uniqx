@@ -13,7 +13,7 @@ use uuid::{uuid, Uuid};
 use crate::uniq::ServerContext;
 
 use super::tcp_listener::{EventHandler, TCPListener, TcpServer};
-pub struct HttpServer {
+pub struct PublicHttpServer {
     listener: TcpListener,
 }
 
@@ -29,7 +29,7 @@ async fn parse_host(mut r: impl AsyncReadExt + Unpin) -> Result<(String, Vec<u8>
     let subdomain = host.split('.').next().unwrap().to_owned();
     Ok((subdomain, buffer.to_owned()))
 }
-impl HttpServer {
+impl PublicHttpServer {
     pub async fn new() -> Self {
         let listener = TcpListener::bind(("0.0.0.0", 8001)).await.unwrap();
         Self {
@@ -39,7 +39,7 @@ impl HttpServer {
     }
 }
 #[async_trait]
-impl EventHandler for HttpServer {
+impl EventHandler for PublicHttpServer {
     async fn handle_conn(&self, mut stream: TcpStream, context: Arc<ServerContext>) -> Result<()> {
         let identifier = Uuid::new_v4().to_string();
         let Ok(( subdomain, buffer )) = parse_host(&mut stream).await else{
@@ -53,14 +53,14 @@ impl EventHandler for HttpServer {
                 return Ok(());
             }
         };
-        t.public_http_conn.insert(identifier.clone(), stream);
+        t.public_conn.insert(identifier.clone(), stream);
         t.event_conn
             .lock()
             .await
             .send(NewClient {
-                initial_buffer: buffer,
-                identifier: identifier.clone(),
-                subdomain: subdomain.clone(),
+                initial_buffer: Some(buffer),
+                public_conn_identifier: identifier.clone(),
+                control_server_identifier: Some(subdomain),
             })
             .await
             .context("error while sending new client info to client")?;
@@ -69,9 +69,8 @@ impl EventHandler for HttpServer {
     }
 }
 
-impl TCPListener for HttpServer {
+impl TCPListener for PublicHttpServer {
     fn listener(&self) -> &TcpListener {
         &self.listener
     }
 }
-// impl TcpServer for HttpServer {}

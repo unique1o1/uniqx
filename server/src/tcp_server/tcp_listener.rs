@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{io::ErrorKind, sync::Arc};
 
 use async_trait::async_trait;
 use tokio::{
@@ -9,6 +9,7 @@ use tracing::{error, info, info_span, warn, Instrument};
 
 use crate::uniq::ServerContext;
 use anyhow::Result;
+#[async_trait]
 pub trait TCPListener {
     fn listener(&self) -> &TcpListener;
 }
@@ -40,7 +41,7 @@ impl<T: TCPListener + EventHandler + Send + Sync + 'static> EventListener for T 
                 async move {
                     // info!("incoming tunnel connection");
                     if let Err(err) = this.handle_conn(stream, context).await {
-                        println!("connection exited with error:{}", err);
+                        error!(?err, "connection exited with error");
                     } else {
                         info!("connection exited");
                     }

@@ -6,24 +6,26 @@ use tokio::main;
 #[derive(Parser)]
 #[clap(author, version, about)]
 struct Args {
-    /// The local port to expose.
-    #[clap(short = 'p', long, value_name = "port")]
-    local_port: u16,
-
     /// The protocol to use for the tunnel.
-    #[clap(long, value_enum)]
+    // #[clap(long, value_enum)]
     protocol: Protocol,
-    /// Subdomain for public access
-    #[clap(short, long, value_name = "subdomain", env = "USER")]
-    subdomain: String,
-
-    /// The local host to expose.
-    #[clap(short, long, value_name = "HOST", default_value = "localhost")]
-    local_host: String,
+    /// The local port to expose.
+    #[clap(long)]
+    local_port: u16,
+    /// Optional port on the remote server to select.
+    #[clap(short, long, required_if_eq("protocol", "tcp"))]
+    port: Option<u16>,
 
     /// Address of the remote server to expose local ports to.
     #[clap(short, long, env = "UNIQ_SERVER")]
     remote_host: String,
+    /// Subdomain for public access
+    #[clap(short, long, required_if_eq("protocol", "http"), env = "USER")]
+    subdomain: Option<String>,
+
+    /// The local host to expose.
+    #[clap(short, long, value_name = "HOST", default_value = "localhost")]
+    local_host: String,
 }
 mod uniq;
 use uniq::*;

@@ -5,24 +5,19 @@ use tokio::sync::Mutex;
 
 use crate::{
     tcp_server::{
-        event_server::EventServer, http_event_server::HttpEventServer, http_server::HttpServer,
-        tcp_listener::TcpServer,
+        event_server::HttpEventServer, public_control_server::ControlServer,
+        public_http_server::PublicHttpServer, tcp_listener::TcpServer,
     },
     tunnel::Tunnel,
 };
 pub(crate) type ServerContext = DashMap<String, Tunnel>;
 
 pub struct Server {
-    domain: String,
-
     server_context: Arc<ServerContext>,
-    // tunnel: Tunnel,
-    // httpServer: HttpServer,
 }
 impl Server {
-    pub async fn new(domain: String) -> Server {
+    pub async fn new() -> Server {
         Server {
-            domain: domain,
             server_context: Arc::new(ServerContext::default()),
         }
     }
@@ -49,8 +44,8 @@ impl Server {
     }
 
     pub async fn start(self) -> Result<()> {
-        self.listen(EventServer::new().await);
-        self.listen(HttpServer::new().await);
+        self.listen(ControlServer::new().await);
+        self.listen(PublicHttpServer::new().await);
         self.listen(HttpEventServer::new().await);
         // this.http_listen();
         Ok(())

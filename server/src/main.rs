@@ -1,14 +1,7 @@
 use std::sync::mpsc::channel;
 
 use anyhow::Result;
-use clap::Parser;
 use server::uniq::Server;
-#[derive(Parser, Debug)]
-#[clap(author, version, about)]
-pub struct Args {
-    #[clap(short, long, env = "UNIQ_DOMAIN")]
-    domain: String,
-}
 
 fn wait() {
     let (tx, rx) = channel();
@@ -18,8 +11,8 @@ fn wait() {
     println!("Exiting...");
 }
 #[tokio::main]
-async fn run(args: Args) -> Result<()> {
-    let tunnel = Server::new(args.domain).await;
+async fn run() -> Result<()> {
+    let tunnel = Server::new().await;
     tunnel.start().await?;
     wait();
     Ok(())
@@ -35,5 +28,5 @@ fn main() -> Result<()> {
         .with_target(false)
         // Build the subscriber
         .init();
-    run(Args::parse())
+    run()
 }
