@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 # crossbeam = { workspace = true }
-tokio-util = { version = "0.7.8", features = ["codec"] }
+tokio-util = { workspace = true }
 anyhow = { workspace = true }
 async-trait = "0.1.73"
 serde = { workspace = true }

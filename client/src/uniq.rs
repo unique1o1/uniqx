@@ -1,13 +1,14 @@
 use std::process::exit;
 use std::sync::Arc;
-use std::time::Duration;
 
 use crate::Args;
 use anyhow::Context;
-use anyhow::Error;
 use anyhow::Result;
 use shared::connect_with_timeout;
-use shared::frame::Delimited;
+use shared::delimited::delimited_framed;
+use shared::delimited::DelimitedReadExt;
+use shared::delimited::DelimitedStream;
+use shared::delimited::DelimitedWriteExt;
 use shared::structs::NewClient;
 use shared::structs::Protocol;
 use shared::structs::TunnelOpen;
@@ -15,14 +16,7 @@ use shared::structs::TunnelRequest;
 use shared::utils::bind;
 use shared::utils::proxy;
 use shared::HTTP_EVENT_SERVER_PORT;
-use shared::NETWORK_TIMEOUT;
 use shared::SERVER_PORT;
-use tokio::io;
-use tokio::net::TcpStream;
-use tokio::sync::Mutex;
-use tokio::sync::OnceCell;
-use tokio::time;
-use tokio::time::timeout;
 use tracing::error;
 use tracing::info;
 use tracing::trace;
@@ -34,12 +28,12 @@ pub(crate) struct UniqClient {
     protocol: Protocol,
     subdomain: Option<String>,
     port: Option<u16>,
-    conn: Option<Delimited<TcpStream>>,
+    conn: Option<DelimitedStream>,
 }
 
 impl UniqClient {
     pub async fn new(args: Args) -> Result<Self> {
-        let stream = Delimited::new(connect_with_timeout(&args.remote_host, SERVER_PORT).await?);
+        let stream = delimited_framed(connect_with_timeout(&args.remote_host, SERVER_PORT).await?);
 
         Ok(Self {
             local_port: args.local_port,
@@ -57,7 +51,9 @@ impl UniqClient {
         let localhost_conn = connect_with_timeout(&self.local_host, self.local_port).await?;
         let mut http_event_stream =
             connect_with_timeout(&self.remote_host, HTTP_EVENT_SERVER_PORT).await?;
-        Delimited::new(&mut http_event_stream).send(data).await?;
+        delimited_framed(&mut http_event_stream)
+            .send_delimited(data)
+            .await?;
         // let (s1_read, s1_write) = io::split(localhost_conn);
         // let (s2_read, s2_write) = io::split(http_event_stream);
         // tokio::spawn(async move { bind(s1_read, s2_write).await.context("cant read from s1") });
@@ -74,10 +70,10 @@ impl UniqClient {
             protocol: self.protocol.clone(),
             subdomain: self.subdomain.clone(),
         };
-        if conn.send(t).await.is_err() {
+        if conn.send_delimited(t).await.is_err() {
             eprintln!("Unable to write to the remote server");
         }
-        let data: TunnelOpen = conn.recv_timeout().await.unwrap();
+        let data: TunnelOpen = conn.recv_timeout_delimited().await.unwrap();
         if data.error_message.is_some() {
             error!("Error: {}", data.error_message.unwrap());
             exit(1)
@@ -89,7 +85,7 @@ impl UniqClient {
         println!(
             "Forwarded: \t {} -> {}",
             format!(
-                "http://{}.{}:{}",
+                "https://{}.{}:{}",
                 self.subdomain.as_ref().unwrap(),
                 self.remote_host,
                 self.port.unwrap_or(443),
@@ -99,7 +95,7 @@ impl UniqClient {
         let this: Arc<UniqClient> = Arc::new(self);
         loop {
             println!("Waiting for new connection");
-            let data: NewClient = conn.recv().await.unwrap();
+            let data: NewClient = conn.recv_delimited().await.unwrap();
             let this = this.clone();
             tokio::spawn(async move {
                 this.handle_request(data).await.unwrap();

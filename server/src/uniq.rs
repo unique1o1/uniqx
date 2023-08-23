@@ -5,7 +5,7 @@ use tokio::sync::Mutex;
 
 use crate::{
     tcp_server::{
-        event_server::HttpEventServer, public_control_server::ControlServer,
+        event_server::EventServer, public_control_server::ControlServer,
         public_http_server::PublicHttpServer, tcp_listener::TcpServer,
     },
     tunnel::Tunnel,
@@ -46,7 +46,7 @@ impl Server {
     pub async fn start(self) -> Result<()> {
         self.listen(ControlServer::new().await);
         self.listen(PublicHttpServer::new().await);
-        self.listen(HttpEventServer::new().await);
+        self.listen(EventServer::new().await);
         // this.http_listen();
         Ok(())
     }

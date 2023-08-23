@@ -16,13 +16,13 @@ clap = { workspace = true }
 
 shared = { path = "../shared" }
 
+uuid = { workspace = true }
+# tokio_util = { workspace = true }
 tokio = { workspace = true }
-uuid.workspace = true
-
 tracing-subscriber = { workspace = true }
 dashmap = { workspace = true }
-
 tracing = { workspace = true }
 ctrlc = "3.4.0"
 async-trait = "0.1.73"
 futures = "0.3.28"
+tokio-util = "0.7.8"

@@ -1,6 +1,6 @@
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
-use shared::{structs::NewClient, utils::write_response};
+use shared::{delimited::DelimitedWriteExt, structs::NewClient, utils::write_response};
 use std::{collections::HashMap, sync::Arc};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -57,7 +57,7 @@ impl EventHandler for PublicHttpServer {
         t.event_conn
             .lock()
             .await
-            .send(NewClient {
+            .send_delimited(NewClient {
                 initial_buffer: Some(buffer),
                 public_conn_identifier: identifier.clone(),
                 control_server_identifier: Some(subdomain),

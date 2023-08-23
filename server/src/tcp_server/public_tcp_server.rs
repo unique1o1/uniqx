@@ -1,6 +1,6 @@
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
-use shared::structs::NewClient;
+use shared::{delimited::DelimitedWriteExt, structs::NewClient};
 use std::sync::Arc;
 use tokio::{
     io::AsyncReadExt,
@@ -49,7 +49,7 @@ impl EventHandler for PublicTcpServer {
         t.event_conn
             .lock()
             .await
-            .send(NewClient {
+            .send_delimited(NewClient {
                 initial_buffer: None,
                 public_conn_identifier: identifier.clone(),
                 control_server_identifier: Some(port.to_string()),

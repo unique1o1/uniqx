@@ -12,10 +12,10 @@ pub const HTTP_EVENT_SERVER_PORT: u16 = 9875;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
-use tokio::{io::AsyncReadExt, net::TcpStream, time::timeout};
+use tokio::{net::TcpStream, time::timeout};
 
+pub mod delimited;
 pub mod events;
-pub mod frame;
 pub mod structs;
 pub mod utils;
 pub async fn connect_with_timeout(to: &str, port: u16) -> Result<TcpStream> {
