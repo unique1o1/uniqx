@@ -30,12 +30,12 @@ async fn parse_host(mut r: impl AsyncReadExt + Unpin) -> Result<(String, Vec<u8>
     Ok((subdomain, buffer.to_owned()))
 }
 impl PublicHttpServer {
-    pub async fn new() -> Self {
-        let listener = TcpListener::bind(("0.0.0.0", 8001)).await.unwrap();
-        Self {
+    pub async fn new() -> Result<Self> {
+        let listener = TcpListener::bind(("0.0.0.0", 8001)).await?;
+        Ok(Self {
             // listener: Arc::new(Mutex::new(listener)),
             listener: listener,
-        }
+        })
     }
 }
 #[async_trait]

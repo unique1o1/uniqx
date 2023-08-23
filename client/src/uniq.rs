@@ -2,7 +2,6 @@ use std::process::exit;
 use std::sync::Arc;
 
 use crate::Args;
-use anyhow::Context;
 use anyhow::Result;
 use shared::connect_with_timeout;
 use shared::delimited::delimited_framed;
@@ -10,20 +9,17 @@ use shared::delimited::DelimitedReadExt;
 use shared::delimited::DelimitedStream;
 use shared::delimited::DelimitedWriteExt;
 use shared::structs::NewClient;
-use shared::structs::Protocol;
 use shared::structs::TunnelOpen;
 use shared::structs::TunnelRequest;
-use shared::utils::bind;
 use shared::utils::proxy;
+use shared::Protocol;
 use shared::HTTP_EVENT_SERVER_PORT;
 use shared::SERVER_PORT;
 use tracing::error;
 use tracing::info;
-use tracing::trace;
 pub(crate) struct UniqClient {
     local_port: u16,
     remote_host: String,
-
     local_host: String,
     protocol: Protocol,
     subdomain: Option<String>,

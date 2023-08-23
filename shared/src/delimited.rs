@@ -1,5 +1,3 @@
-//! Shared data structures, utilities, and protocol definitions.
-
 use crate::NETWORK_TIMEOUT;
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
@@ -59,7 +57,6 @@ pub trait DelimitedReadExt {
 #[async_trait]
 impl<U> DelimitedReadExt for U
 where
-    // T: DeserializeOwned + Send + Sync + 'static, // U: AsyncWrite + Unpin + Send,
     U: Stream + StreamExt + Unpin + Send,
     U: Stream<Item = Result<Bytes, AnyDelimiterCodecError>>,
 {

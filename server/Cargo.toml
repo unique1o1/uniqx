@@ -25,4 +25,4 @@ tracing = { workspace = true }
 ctrlc = "3.4.0"
 async-trait = "0.1.73"
 futures = "0.3.28"
-tokio-util = "0.7.8"
+tokio-util = { workspace = true }

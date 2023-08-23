@@ -22,11 +22,11 @@ pub struct EventServer {
 }
 
 impl EventServer {
-    pub async fn new() -> Self {
+    pub async fn new() -> Result<Self> {
         let listener = TcpListener::bind(("0.0.0.0", HTTP_EVENT_SERVER_PORT))
             .await
             .unwrap();
-        Self { listener: listener }
+        Ok(Self { listener: listener })
     }
 }
 impl TCPListener for EventServer {

@@ -1,8 +1,6 @@
 use anyhow::Result;
-use clap::{error::ErrorKind, CommandFactory, Parser, Subcommand};
-use shared::{events, structs::Protocol};
-use std::net::TcpListener;
-use tokio::main;
+use clap::Parser;
+use shared::Protocol;
 #[derive(Parser)]
 #[clap(author, version, about)]
 struct Args {

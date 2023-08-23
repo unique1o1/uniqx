@@ -838,6 +838,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tests"
+version = "0.1.0"
+dependencies = [
+ "client",
+ "server",
+ "shared",
+]
+
+[[package]]
 name = "thread_local"
 version = "1.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"

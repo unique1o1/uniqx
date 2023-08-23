@@ -21,19 +21,7 @@ impl Server {
             server_context: Arc::new(ServerContext::default()),
         }
     }
-    // fn http_listen(self, http_server: HttpServer) {
-    //     let context: Arc<RwLock<ServerContext>> = self.server_context.clone();
-    //     tokio::spawn(async move {
-    //         http_server.listen(context).await.unwrap();
-    //     });
-    // }
 
-    // fn public_http_listen(self, http_server: HttpServer) {
-    //     let context = self.server_context.clone();
-    //     tokio::spawn(async move {
-    //         http_server.listen(context).await.unwrap();
-    //     });
-    // }
     // Start the server, listening for new connections.
     fn listen<S: TcpServer + 'static>(&self, event_server: S) {
         let context = self.server_context.clone();
@@ -44,9 +32,9 @@ impl Server {
     }
 
     pub async fn start(self) -> Result<()> {
-        self.listen(ControlServer::new().await);
-        self.listen(PublicHttpServer::new().await);
-        self.listen(EventServer::new().await);
+        self.listen(ControlServer::new().await?);
+        self.listen(PublicHttpServer::new().await?);
+        self.listen(EventServer::new().await?);
         // this.http_listen();
         Ok(())
     }

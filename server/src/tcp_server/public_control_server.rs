@@ -5,13 +5,13 @@ use shared::delimited::{
 };
 use shared::structs::NewClient;
 use shared::utils::DeferCall;
-use shared::NETWORK_TIMEOUT;
 use shared::{
     defer,
-    structs::{Protocol, TunnelOpen, TunnelRequest},
+    structs::{TunnelOpen, TunnelRequest},
     utils::validate_subdomain,
     SERVER_PORT,
 };
+use shared::{Protocol, NETWORK_TIMEOUT};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
@@ -113,10 +113,10 @@ impl EventHandler for ControlServer {
 }
 
 impl ControlServer {
-    pub async fn new() -> Self {
+    pub async fn new() -> Result<Self> {
         let addr = SocketAddr::from(([0, 0, 0, 0], SERVER_PORT));
-        let listener = TcpListener::bind(addr).await.unwrap();
+        let listener = TcpListener::bind(addr).await?;
         info!(?addr, "server listening");
-        Self { listener: listener }
+        Ok(Self { listener: listener })
     }
 }
