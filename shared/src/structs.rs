@@ -5,12 +5,13 @@ use crate::Protocol;
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct TunnelRequest {
     pub protocol: Protocol,
-    pub subdomain: Option<String>,
+    pub subdomain: String,
     pub tcp_port: Option<u16>,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct TunnelOpen {
+    pub access_point: String,
     pub error_message: Option<String>,
 }
 impl TunnelOpen {

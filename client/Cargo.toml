@@ -16,5 +16,5 @@ tracing = { workspace = true }
 tokio = { workspace = true }
 uuid = { workspace = true }
 tracing-subscriber = { workspace = true }
-
+socket2 = { workspace = true }
 tokio-util = { workspace = true }

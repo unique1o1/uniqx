@@ -1,18 +1,28 @@
 use std::sync::mpsc::channel;
 
 use anyhow::Result;
-use server::uniq::Server;
 
+use clap::{Arg, Parser};
+use server::uniq::Server;
+use shared::Protocol;
+use tracing::info;
+#[derive(Parser)]
+#[clap(author, version, about)]
+struct Args {
+    /// Domain being used for public access
+    #[clap(short, long)]
+    domain: String,
+}
 fn wait() {
     let (tx, rx) = channel();
     ctrlc::set_handler(move || tx.send(()).expect("Could not send signal on channel."))
         .expect("Error setting Ctrl-C handler");
     rx.recv().expect("Could not receive from channel.");
-    println!("Exiting...");
+    info!("Exiting...");
 }
 #[tokio::main]
-async fn run() -> Result<()> {
-    let tunnel = Server::new().await;
+async fn run(args: Args) -> Result<()> {
+    let tunnel = Server::new(args.domain).await;
     tunnel.start().await?;
     wait();
     Ok(())
@@ -28,5 +38,5 @@ fn main() -> Result<()> {
         .with_target(false)
         // Build the subscriber
         .init();
-    run()
+    run(Args::parse())
 }

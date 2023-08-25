@@ -5,7 +5,9 @@ use tokio::{
     net::TcpStream,
 };
 use tracing::info;
+// use url::Url;
 static BLOCK_LIST: &[&str] = &["www", "uniq"];
+
 pub fn validate_subdomain(subdomain: &str) -> Result<(), String> {
     let regex = Regex::new(r"^[a-z\d](?:[a-z\d]|-[a-z\d]){0,38}$").unwrap();
     if subdomain.len() > 38 || subdomain.len() < 3 {
@@ -34,7 +36,6 @@ macro_rules! defer {
     ($e:expr) => {
         let _scope_call = DeferCall {
             c: || -> () {
-                println!("deferred");
                 $e;
             },
         };
@@ -66,8 +67,8 @@ where
     let (mut s1_read, mut s1_write) = io::split(stream1);
     let (mut s2_read, mut s2_write) = io::split(stream2);
     tokio::select! {
-        res = io::copy(&mut s1_read, &mut s2_write) => { println!("wwwwwww");res },
-        res = io::copy(&mut s2_read, &mut s1_write) =>  {println!("rrrrrr");res }
+        res = io::copy(&mut s1_read, &mut s2_write) => { info!("local connection discounted"); res },
+        res = io::copy(&mut s2_read, &mut s1_write) =>  {info!("event connection discounted");  res }
     }?;
     Ok(())
 }

@@ -1,12 +1,13 @@
 use async_trait::async_trait;
 use std::sync::Arc;
+use tracing::info;
 
 use anyhow::{Error, Result};
 use shared::{
     delimited::{delimited_framed, DelimitedReadExt},
     structs::NewClient,
     utils::proxy,
-    HTTP_EVENT_SERVER_PORT,
+    EVENT_SERVER_PORT,
 };
 use tokio::{
     io::AsyncWriteExt,
@@ -23,7 +24,7 @@ pub struct EventServer {
 
 impl EventServer {
     pub async fn new() -> Result<Self> {
-        let listener = TcpListener::bind(("0.0.0.0", HTTP_EVENT_SERVER_PORT))
+        let listener = TcpListener::bind(("0.0.0.0", EVENT_SERVER_PORT))
             .await
             .unwrap();
         Ok(Self { listener: listener })
@@ -38,9 +39,8 @@ impl TCPListener for EventServer {
 
 #[async_trait]
 impl EventHandler for EventServer {
-    async fn handle_conn(&self, stream: TcpStream, context: Arc<ServerContext>) -> Result<()> {
-        let mut delimited_framed = delimited_framed(stream);
-        let data: NewClient = delimited_framed.recv_delimited().await?;
+    async fn handle_conn(&self, mut stream: TcpStream, context: Arc<ServerContext>) -> Result<()> {
+        let data: NewClient = delimited_framed(&mut stream).recv_delimited().await?;
         let t = match context.get(&data.control_server_identifier.unwrap()) {
             Some(t) => t,
             None => {
@@ -49,11 +49,10 @@ impl EventHandler for EventServer {
         };
         let (_, public_http_conn) = t.public_conn.remove(&data.public_conn_identifier).unwrap();
         drop(t);
-        let mut stream = delimited_framed.into_inner();
         if data.initial_buffer.is_some() {
             stream.write_all(&data.initial_buffer.unwrap()).await?;
         }
-        proxy(stream, public_http_conn).await?;
+        proxy(public_http_conn, stream).await?;
 
         Ok(())
     }

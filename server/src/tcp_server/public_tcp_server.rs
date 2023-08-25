@@ -1,7 +1,8 @@
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
 use shared::{delimited::DelimitedWriteExt, structs::NewClient};
-use std::sync::Arc;
+use socket2::{SockRef, TcpKeepalive};
+use std::{sync::Arc, time::Duration};
 use tokio::{
     io::AsyncReadExt,
     net::{TcpListener, TcpStream},
@@ -31,6 +32,7 @@ async fn parse_host(mut r: impl AsyncReadExt + Unpin) -> Result<(String, Vec<u8>
 impl PublicTcpServer {
     pub async fn new(port: u16) -> Self {
         let listener = TcpListener::bind(("0.0.0.0", port)).await.unwrap();
+
         Self {
             // listener: Arc::new(Mutex::new(listener)),
             listener: listener,

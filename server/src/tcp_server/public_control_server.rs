@@ -1,5 +1,6 @@
-use anyhow::{Context, Ok, Result};
+use anyhow::{Context, Result};
 use async_trait::async_trait;
+use futures::StreamExt;
 use shared::delimited::{
     delimited_framed_read, delimited_framed_write, DelimitedReadExt, DelimitedWriteExt,
 };
@@ -11,13 +12,12 @@ use shared::{
     utils::validate_subdomain,
     SERVER_PORT,
 };
-use shared::{Protocol, NETWORK_TIMEOUT};
+use shared::{Protocol, NETWORK_TIMEOUT, TCP_KEEPCNT, TCP_KEEPIDLE, TCP_KEEPINTVL};
+use socket2::{SockRef, TcpKeepalive};
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::net::{TcpListener, TcpStream};
-use tokio::task::JoinSet;
-use tokio::time::timeout;
-use tokio_util::codec::FramedRead;
 use tracing::info;
 
 use crate::tcp_server::public_tcp_server::PublicTcpServer;
@@ -27,6 +27,7 @@ use crate::uniq::ServerContext;
 use super::tcp_listener::{EventHandler, EventListener, TCPListener};
 
 pub struct ControlServer {
+    domain: String,
     listener: TcpListener,
 }
 impl TCPListener for ControlServer {
@@ -46,28 +47,34 @@ impl EventHandler for ControlServer {
 
         match data.protocol {
             Protocol::HTTP => {
-                if let Err(msg) = validate_subdomain(data.subdomain.as_ref().unwrap()) {
+                if let Err(msg) = validate_subdomain(&data.subdomain) {
                     let data: TunnelOpen = TunnelOpen::with_error(&msg);
                     write.send_delimited(data).await?;
                 }
-                if context.contains_key(data.subdomain.as_ref().unwrap()) {
+                if context.contains_key(&data.subdomain) {
                     let data: TunnelOpen =
                         TunnelOpen::with_error("subdomain already in use".into());
                     write.send_delimited(data).await?;
                     return Ok(());
                 }
-                write.send_delimited(TunnelOpen::default()).await?;
+                write
+                    .send_delimited(TunnelOpen {
+                        access_point: format!("{}.{}", &data.subdomain, &self.domain),
+                        ..Default::default()
+                    })
+                    .await?;
                 context.insert(
-                    data.subdomain.clone().unwrap(),
+                    data.subdomain.clone(),
                     Tunnel::with_event_conn(write).into(),
                 );
                 defer! {
                     context
-                   .remove(&data.subdomain.clone().unwrap())
+                   .remove(&data.subdomain.clone())
                 }
-                loop {
-                    read.recv_delimited().await.context("client disconnected")?;
-                }
+
+                let _: NewClient = read.recv_delimited().await.context("client disconnected")?;
+
+                Ok(())
             }
             Protocol::TCP => {
                 // let listener = TcpListener::bind(("0.0.0.0", data.tcp_port.unwrap())).await?;
@@ -79,14 +86,19 @@ impl EventHandler for ControlServer {
                 }
                 let listener = PublicTcpServer::new(data.tcp_port.unwrap()).await;
                 let context_clone = context.clone();
-                let mut set = JoinSet::new();
+                // let mut set = JoinSet::new();
 
-                set.spawn(async move {
+                let handle = tokio::spawn(async move {
                     listener.listen(context_clone).await.unwrap();
-                    println!("exiting listener");
+                    info!("exiting listener");
                 });
 
-                write.send_delimited(TunnelOpen::default()).await?;
+                write
+                    .send_delimited(TunnelOpen {
+                        access_point: format!("{}.{}", &data.subdomain, &self.domain),
+                        ..Default::default()
+                    })
+                    .await?;
                 context.insert(
                     data.tcp_port.unwrap().to_string(),
                     Tunnel::with_event_conn(write).into(),
@@ -99,13 +111,10 @@ impl EventHandler for ControlServer {
                    )
                 }
                 // let handle = Arc::new(handle);
-                set.spawn(async move {
-                    let _: Result<NewClient> =
-                        read.recv_delimited().await.context("client disconnected");
-                    ()
-                });
-                set.join_next().await;
-                set.abort_all();
+
+                let _: Result<NewClient> =
+                    read.recv_delimited().await.context("client disconnected");
+                handle.abort();
                 Ok(())
             }
         }
@@ -113,10 +122,17 @@ impl EventHandler for ControlServer {
 }
 
 impl ControlServer {
-    pub async fn new() -> Result<Self> {
+    pub async fn new(domain: String) -> Result<Self> {
         let addr = SocketAddr::from(([0, 0, 0, 0], SERVER_PORT));
         let listener = TcpListener::bind(addr).await?;
+        let keepalive = TcpKeepalive::new()
+            .with_time(Duration::from_secs(TCP_KEEPIDLE))
+            .with_interval(Duration::from_secs(TCP_KEEPINTVL))
+            .with_retries(TCP_KEEPCNT);
+        SockRef::from(&listener)
+            .set_tcp_keepalive(&keepalive)
+            .unwrap();
         info!(?addr, "server listening");
-        Ok(Self { listener: listener })
+        Ok(Self { listener, domain })
     }
 }

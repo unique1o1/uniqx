@@ -74,9 +74,8 @@ where
 
     async fn recv_delimited<S: DeserializeOwned + Send + Sync + 'static>(&mut self) -> Result<S> {
         if let Some(next_message) = self.next().await {
-            let byte_message = next_message.context("frame error, invalid byte length")?;
             let serialized_obj =
-                serde_json::from_slice(&byte_message).context("unable to parse message")?;
+                serde_json::from_slice(&next_message?).context("unable to parse message")?;
             Ok(serialized_obj)
         } else {
             Err(Error::msg("Connection closed"))

@@ -1,7 +1,8 @@
 use std::process::exit;
 use std::sync::Arc;
+use std::time::Duration;
 
-use crate::Args;
+// use crate::Addrgs;
 use anyhow::Result;
 use shared::connect_with_timeout;
 use shared::delimited::delimited_framed;
@@ -13,32 +14,51 @@ use shared::structs::TunnelOpen;
 use shared::structs::TunnelRequest;
 use shared::utils::proxy;
 use shared::Protocol;
-use shared::HTTP_EVENT_SERVER_PORT;
+use shared::EVENT_SERVER_PORT;
 use shared::SERVER_PORT;
+use shared::TCP_KEEPCNT;
+use shared::TCP_KEEPIDLE;
+use shared::TCP_KEEPINTVL;
+use socket2::SockRef;
+use socket2::TcpKeepalive;
 use tracing::error;
 use tracing::info;
-pub(crate) struct UniqClient {
+// use crate::console::Conn
+pub struct UniqClient {
     local_port: u16,
     remote_host: String,
     local_host: String,
     protocol: Protocol,
-    subdomain: Option<String>,
+    subdomain: String,
     port: Option<u16>,
     conn: Option<DelimitedStream>,
 }
 
 impl UniqClient {
-    pub async fn new(args: Args) -> Result<Self> {
-        let stream = delimited_framed(connect_with_timeout(&args.remote_host, SERVER_PORT).await?);
+    pub async fn new(
+        protocol: Protocol,
+        local_port: u16,
+        port: Option<u16>,
+        remote_host: String,
+        subdomain: String,
+        local_host: String,
+    ) -> Result<Self> {
+        let conn = connect_with_timeout(&remote_host, SERVER_PORT).await?;
+        let keepalive = TcpKeepalive::new()
+            .with_time(Duration::from_secs(TCP_KEEPIDLE))
+            .with_interval(Duration::from_secs(TCP_KEEPINTVL))
+            .with_retries(TCP_KEEPCNT);
+        SockRef::from(&conn).set_tcp_keepalive(&keepalive).unwrap();
+        let stream = delimited_framed(conn);
 
         Ok(Self {
-            local_port: args.local_port,
-            remote_host: args.remote_host,
-            port: args.port,
-            local_host: args.local_host,
+            local_port: local_port,
+            remote_host: remote_host,
+            port: port,
+            local_host: local_host,
             conn: Some(stream),
-            subdomain: args.subdomain,
-            protocol: args.protocol,
+            subdomain: subdomain,
+            protocol: protocol,
         })
     }
 
@@ -46,7 +66,7 @@ impl UniqClient {
         info!("connecting to local server and http event server");
         let localhost_conn = connect_with_timeout(&self.local_host, self.local_port).await?;
         let mut http_event_stream =
-            connect_with_timeout(&self.remote_host, HTTP_EVENT_SERVER_PORT).await?;
+            connect_with_timeout(&self.remote_host, EVENT_SERVER_PORT).await?;
         delimited_framed(&mut http_event_stream)
             .send_delimited(data)
             .await?;
@@ -59,7 +79,7 @@ impl UniqClient {
         Ok(())
     }
 
-    pub async fn start(mut self) -> ! {
+    pub async fn start(mut self) -> Result<()> {
         let mut conn = self.conn.take().unwrap();
         let t = TunnelRequest {
             tcp_port: self.port,
@@ -67,7 +87,7 @@ impl UniqClient {
             subdomain: self.subdomain.clone(),
         };
         if conn.send_delimited(t).await.is_err() {
-            eprintln!("Unable to write to the remote server");
+            error!("Unable to write to the remote server");
         }
         let data: TunnelOpen = conn.recv_timeout_delimited().await.unwrap();
         if data.error_message.is_some() {
@@ -80,18 +100,12 @@ impl UniqClient {
 
         println!(
             "Forwarded: \t {} -> {}",
-            format!(
-                "https://{}.{}:{}",
-                self.subdomain.as_ref().unwrap(),
-                self.remote_host,
-                self.port.unwrap_or(443),
-            ),
-            format!("http://{}:{}", self.local_host, self.local_port),
+            format!("{}:{}", data.access_point, self.port.unwrap_or(443),),
+            format!("{}:{}", self.local_host, self.local_port),
         );
         let this: Arc<UniqClient> = Arc::new(self);
         loop {
-            println!("Waiting for new connection");
-            let data: NewClient = conn.recv_delimited().await.unwrap();
+            let data: NewClient = conn.recv_delimited().await?;
             let this = this.clone();
             tokio::spawn(async move {
                 this.handle_request(data).await.unwrap();

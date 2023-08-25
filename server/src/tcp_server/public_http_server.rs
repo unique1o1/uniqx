@@ -31,7 +31,7 @@ async fn parse_host(mut r: impl AsyncReadExt + Unpin) -> Result<(String, Vec<u8>
 }
 impl PublicHttpServer {
     pub async fn new() -> Result<Self> {
-        let listener = TcpListener::bind(("0.0.0.0", 8001)).await?;
+        let listener = TcpListener::bind(("0.0.0.0", 8009)).await?;
         Ok(Self {
             // listener: Arc::new(Mutex::new(listener)),
             listener: listener,
@@ -42,9 +42,9 @@ impl PublicHttpServer {
 impl EventHandler for PublicHttpServer {
     async fn handle_conn(&self, mut stream: TcpStream, context: Arc<ServerContext>) -> Result<()> {
         let identifier = Uuid::new_v4().to_string();
-        let Ok(( subdomain, buffer )) = parse_host(&mut stream).await else{
-                write_response(stream, 400,"Bad Request", "Bad Request").await?;
-                return Err(Error::msg("parse host error"));
+        let Ok((subdomain, buffer)) = parse_host(&mut stream).await else {
+            write_response(stream, 400, "Bad Request", "Bad Request").await?;
+            return Err(Error::msg("parse host error"));
         };
         let t = match context.get(&subdomain) {
             Some(t) => t,

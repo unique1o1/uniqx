@@ -26,3 +26,5 @@ ctrlc = "3.4.0"
 async-trait = "0.1.73"
 futures = "0.3.28"
 tokio-util = { workspace = true }
+
+socket2 = { workspace = true }

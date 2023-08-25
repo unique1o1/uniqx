@@ -2,6 +2,7 @@ use anyhow::{Ok, Result};
 use dashmap::DashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tracing::info;
 
 use crate::{
     tcp_server::{
@@ -13,11 +14,13 @@ use crate::{
 pub(crate) type ServerContext = DashMap<String, Tunnel>;
 
 pub struct Server {
+    domain: String,
     server_context: Arc<ServerContext>,
 }
 impl Server {
-    pub async fn new() -> Server {
+    pub async fn new(domain: String) -> Server {
         Server {
+            domain: domain,
             server_context: Arc::new(ServerContext::default()),
         }
     }
@@ -27,12 +30,12 @@ impl Server {
         let context = self.server_context.clone();
         tokio::spawn(async move {
             event_server.listen(context).await.unwrap();
-            println!("exiting listener");
+            info!("exiting listener");
         });
     }
 
     pub async fn start(self) -> Result<()> {
-        self.listen(ControlServer::new().await?);
+        self.listen(ControlServer::new(self.domain.clone()).await?);
         self.listen(PublicHttpServer::new().await?);
         self.listen(EventServer::new().await?);
         // this.http_listen();
