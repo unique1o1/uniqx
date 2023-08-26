@@ -8,7 +8,7 @@ A simple HTTP/TCP tunnel in Rust that exposes local ports to a remote server, by
 ### Using Rust 
 ---
 ```bash
-$ cargo install --git github.com/unique1o1/uniq.git client
+$ cargo install --git https://github.com/unique1o1/uniq.git client
 ```
 ---
 
