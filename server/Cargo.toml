@@ -5,19 +5,12 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[[bin]]
-name = "uniq-server"
-path = "src/main.rs"
-
 [dependencies]
 # crossbeam = { workspace = true }
 anyhow = { workspace = true }
 clap = { workspace = true }
-
 shared = { path = "../shared" }
-
 uuid = { workspace = true }
-# tokio_util = { workspace = true }
 tokio = { workspace = true }
 tracing-subscriber = { workspace = true }
 dashmap = { workspace = true }

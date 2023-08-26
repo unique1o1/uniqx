@@ -1,6 +1,6 @@
 use anyhow::{Ok, Result};
 use dashmap::DashMap;
-use std::sync::Arc;
+use std::sync::{mpsc::channel, Arc};
 use tracing::info;
 
 use crate::{
@@ -39,6 +39,12 @@ impl Server {
         self.listen(ControlServer::new(self.domain.clone()).await?);
         self.listen(HttpServer::new(self.http_port).await?);
         self.listen(EventServer::new().await?);
+
+        let (tx, rx) = channel();
+        ctrlc::set_handler(move || tx.send(()).expect("Could not send signal on channel."))
+            .expect("Error setting Ctrl-C handler");
+        rx.recv().expect("Could not receive from channel.");
+        info!("Exiting...");
         Ok(())
     }
 }

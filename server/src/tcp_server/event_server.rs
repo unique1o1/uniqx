@@ -14,7 +14,7 @@ use tokio::{
     net::{TcpListener, TcpStream},
 };
 
-use crate::uniq::ServerContext;
+use crate::uniqx::ServerContext;
 
 use super::tcp_listener::{EventHandler, TCPListener};
 

@@ -8,7 +8,7 @@ use tokio::{
 };
 use uuid::Uuid;
 
-use crate::uniq::ServerContext;
+use crate::uniqx::ServerContext;
 
 use super::tcp_listener::{EventHandler, TCPListener};
 pub struct HttpServer {

@@ -1,11 +1,36 @@
+[package]
+name = "uniqx"
+version = "2.0.0"
+description = "A simple tool to tunnel TCP and HTTP traffic."
+authors = ["Yunik Maharjan <https://github.com/unique1o1>"]
+readme = "README.md"
+keywords = ["network", "cli", "tunnel", "tcp", "http"]
+repository = "https://github.com/unique1o1/uniqx"
+license = "MIT OR Apache-2.0"
+
+edition = "2021"
+rust-version = "1.56"
+
+[[bin]]
+name = "uniqx"
+path = "src/main.rs"
+
+[dependencies]
+server = { path = "server" }
+client = { path = "client" }
+tracing-subscriber = { workspace = true }
+tokio = { workspace = true }
+shared = { path = "shared" }
+clap = { workspace = true }
+anyhow = { workspace = true }
 [workspace]
-members = ["server", "client", "shared", "tests"]
+members = ["server", "client", "shared"]
 resolver = "2"
 
 [workspace.dependencies]
 dashmap = { version = "5.5.0" }
+anyhow = { version = "1.0.72" }
 # crossbeam = "0.8"
-anyhow = { version = "1.0.72", feaures = ["std"] }
 clap = { version = "4.3.21", features = ["derive", "env"] }
 tokio = { version = "1.31.0", features = [
     "rt-multi-thread",

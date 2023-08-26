@@ -10,7 +10,7 @@ use tokio::{
 use tracing::info;
 use uuid::{uuid, Uuid};
 
-use crate::uniq::ServerContext;
+use crate::uniqx::ServerContext;
 
 use super::tcp_listener::{EventHandler, TCPListener, TcpServer};
 pub struct PublicTcpServer {

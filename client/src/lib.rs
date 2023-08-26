@@ -1,3 +1,3 @@
 // mod console;
-pub mod uniq;
+pub mod uniqx;
 // mod super::;
