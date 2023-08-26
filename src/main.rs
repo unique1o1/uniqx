@@ -41,7 +41,7 @@ enum Command {
     },
 }
 // mod console;
-use client::uniqx::UniqClient;
+use client::uniqx::UniqxClient;
 
 #[tokio::main]
 async fn run(command: Command) -> Result<()> {
@@ -54,7 +54,7 @@ async fn run(command: Command) -> Result<()> {
             subdomain,
             local_host,
         } => {
-            let client = UniqClient::new(
+            let client = UniqxClient::new(
                 protocol,
                 local_port,
                 port,
@@ -66,7 +66,7 @@ async fn run(command: Command) -> Result<()> {
             client.start().await?;
         }
         Command::Server { domain, http_port } => {
-            let tunnel = server::uniqx::Server::new(domain, http_port).await;
+            let tunnel = server::uniqx::UniqxServer::new(domain, http_port).await;
             tunnel.start().await?;
         }
     }

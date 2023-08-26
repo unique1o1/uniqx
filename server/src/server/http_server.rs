@@ -30,7 +30,7 @@ async fn parse_host(mut r: impl AsyncReadExt + Unpin) -> Result<(String, Vec<u8>
 impl HttpServer {
     pub async fn new(port: u16) -> Result<Self> {
         let listener = TcpListener::bind(("0.0.0.0", port)).await?;
-        Ok(Self { listener: listener })
+        Ok(Self { listener })
     }
 }
 #[async_trait]

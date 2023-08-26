@@ -1,3 +1,3 @@
-pub mod tcp_server;
+pub mod server;
 pub mod tunnel;
 pub mod uniqx;

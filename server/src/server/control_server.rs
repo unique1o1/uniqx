@@ -18,7 +18,7 @@ use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
 use tracing::info;
 
-use crate::tcp_server::tcp_server::TcpServer;
+use crate::server::tcp_server::TcpServer;
 use crate::tunnel::Tunnel;
 use crate::uniqx::ServerContext;
 
@@ -31,7 +31,7 @@ pub struct ControlServer {
 impl TCPListener for ControlServer {
     #[inline]
     fn listener(&self) -> &TcpListener {
-        return &self.listener;
+        &self.listener
     }
 }
 #[async_trait]
@@ -50,8 +50,7 @@ impl EventHandler for ControlServer {
                     write.send_delimited(data).await?;
                 }
                 if context.contains_key(&data.subdomain) {
-                    let data: TunnelOpen =
-                        TunnelOpen::with_error("subdomain already in use".into());
+                    let data: TunnelOpen = TunnelOpen::with_error("subdomain already in use");
                     write.send_delimited(data).await?;
                     return Ok(());
                 }
@@ -61,10 +60,7 @@ impl EventHandler for ControlServer {
                         ..Default::default()
                     })
                     .await?;
-                context.insert(
-                    data.subdomain.clone(),
-                    Tunnel::with_event_conn(write).into(),
-                );
+                context.insert(data.subdomain.clone(), Tunnel::with_event_conn(write));
                 defer! {
                     context
                    .remove(&data.subdomain.clone())
@@ -99,7 +95,7 @@ impl EventHandler for ControlServer {
                     .await?;
                 context.insert(
                     data.tcp_port.unwrap().to_string(),
-                    Tunnel::with_event_conn(write).into(),
+                    Tunnel::with_event_conn(write),
                 );
                 defer! {
                     context

@@ -18,10 +18,7 @@ impl TcpServer {
     pub async fn new(port: u16) -> Self {
         let listener = TcpListener::bind(("0.0.0.0", port)).await.unwrap();
 
-        Self {
-            // listener: Arc::new(Mutex::new(listener)),
-            listener: listener,
-        }
+        Self { listener }
     }
 }
 #[async_trait]

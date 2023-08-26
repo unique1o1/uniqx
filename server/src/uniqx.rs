@@ -4,7 +4,7 @@ use std::sync::{mpsc::channel, Arc};
 use tracing::info;
 
 use crate::{
-    tcp_server::{
+    server::{
         control_server::ControlServer, event_server::EventServer, http_server::HttpServer,
         tcp_listener::TcpServer,
     },
@@ -12,14 +12,14 @@ use crate::{
 };
 pub(crate) type ServerContext = DashMap<String, Tunnel>;
 
-pub struct Server {
+pub struct UniqxServer {
     domain: String,
     http_port: u16,
     server_context: Arc<ServerContext>,
 }
-impl Server {
-    pub async fn new(domain: String, http_port: u16) -> Server {
-        Server {
+impl UniqxServer {
+    pub async fn new(domain: String, http_port: u16) -> UniqxServer {
+        UniqxServer {
             domain,
             server_context: Arc::new(ServerContext::default()),
             http_port,

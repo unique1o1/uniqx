@@ -16,9 +16,10 @@ pub struct TunnelOpen {
 }
 impl TunnelOpen {
     pub fn with_error(msg: &str) -> Self {
-        let mut data = Self::default();
-        data.error_message = Some(msg.to_owned());
-        data
+        Self {
+            error_message: Some(msg.to_owned()),
+            ..Default::default()
+        }
     }
 }
 #[derive(Serialize, Deserialize)]

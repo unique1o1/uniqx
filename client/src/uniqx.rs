@@ -20,7 +20,7 @@ use socket2::SockRef;
 use tracing::error;
 use tracing::info;
 // use crate::console::Conn
-pub struct UniqClient {
+pub struct UniqxClient {
     local_port: u16,
     remote_host: String,
     local_host: String,
@@ -30,7 +30,7 @@ pub struct UniqClient {
     conn: Option<DelimitedStream>,
 }
 
-impl UniqClient {
+impl UniqxClient {
     pub async fn new(
         protocol: Protocol,
         local_port: u16,
@@ -47,13 +47,13 @@ impl UniqClient {
         let stream = delimited_framed(conn);
 
         Ok(Self {
-            local_port: local_port,
-            remote_host: remote_host,
-            port: port,
-            local_host: local_host,
+            local_port,
+            remote_host,
+            port,
+            local_host,
+            subdomain,
+            protocol,
             conn: Some(stream),
-            subdomain: subdomain,
-            protocol: protocol,
         })
     }
 
@@ -94,11 +94,13 @@ impl UniqClient {
         println!("Protocol: \t {:?}", self.protocol);
 
         println!(
-            "Forwarded: \t {} -> {}",
-            format!("{}:{}", data.access_point, self.port.unwrap_or(443),),
-            format!("{}:{}", self.local_host, self.local_port),
+            "Forwarded: \t {}:{} -> {}:{}",
+            data.access_point,
+            self.port.unwrap_or(443),
+            self.local_host,
+            self.local_port
         );
-        let this: Arc<UniqClient> = Arc::new(self);
+        let this: Arc<UniqxClient> = Arc::new(self);
         loop {
             let data: NewClient = conn.recv_delimited().await?;
             let this = this.clone();

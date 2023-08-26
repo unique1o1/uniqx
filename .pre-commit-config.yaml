@@ -1,0 +1,35 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v3.2.0
+    hooks:
+    -   id: trailing-whitespace
+    -   id: end-of-file-fixer
+    -   id: check-yaml
+    -   id: check-added-large-files
+-   repo: local
+    hooks:
+    -   id: rust-fmt
+        name: Rust fmt
+        description: Run cargo fmt on files included in the commit. fmt should be installed before-hand.
+        entry: cargo fmt --all --
+        pass_filenames: true
+        types: [file, rust]
+        language: rust
+
+    -   id: test
+        name: Cargo Test
+        description: Run tests on files included in the commit. test should be installed before-hand.
+        entry: cargo test
+        pass_filenames: false
+        types: [file, rust]
+        language: rust
+
+    -   id: rust-clippy
+        name: Rust clippy
+        description: Run cargo clippy on files included in the commit. clippy should be installed before-hand.
+        entry: cargo clippy -- -D warnings
+        pass_filenames: false
+        types: [file, rust]
+        language: rust

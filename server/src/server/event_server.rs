@@ -26,13 +26,13 @@ impl EventServer {
         let listener = TcpListener::bind(("0.0.0.0", EVENT_SERVER_PORT))
             .await
             .unwrap();
-        Ok(Self { listener: listener })
+        Ok(Self { listener })
     }
 }
 impl TCPListener for EventServer {
     #[inline]
     fn listener(&self) -> &TcpListener {
-        return &self.listener;
+        &self.listener
     }
 }
 
