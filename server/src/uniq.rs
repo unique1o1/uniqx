@@ -1,13 +1,12 @@
 use anyhow::{Ok, Result};
 use dashmap::DashMap;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use tracing::info;
 
 use crate::{
     tcp_server::{
-        event_server::EventServer, public_control_server::ControlServer,
-        public_http_server::PublicHttpServer, tcp_listener::TcpServer,
+        control_server::ControlServer, event_server::EventServer, http_server::PublicHttpServer,
+        tcp_listener::TcpServer,
     },
     tunnel::Tunnel,
 };

@@ -20,7 +20,7 @@ use std::time::Duration;
 use tokio::net::{TcpListener, TcpStream};
 use tracing::info;
 
-use crate::tcp_server::public_tcp_server::PublicTcpServer;
+use crate::tcp_server::tcp_server::PublicTcpServer;
 use crate::tunnel::Tunnel;
 use crate::uniq::ServerContext;
 
