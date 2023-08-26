@@ -1,6 +1,5 @@
 use std::process::exit;
 use std::sync::Arc;
-use std::time::Duration;
 
 // use crate::Addrgs;
 use anyhow::Result;
@@ -13,14 +12,11 @@ use shared::structs::NewClient;
 use shared::structs::TunnelOpen;
 use shared::structs::TunnelRequest;
 use shared::utils::proxy;
+use shared::utils::set_tcp_keepalive;
 use shared::Protocol;
 use shared::EVENT_SERVER_PORT;
 use shared::SERVER_PORT;
-use shared::TCP_KEEPCNT;
-use shared::TCP_KEEPIDLE;
-use shared::TCP_KEEPINTVL;
 use socket2::SockRef;
-use socket2::TcpKeepalive;
 use tracing::error;
 use tracing::info;
 // use crate::console::Conn
@@ -44,11 +40,10 @@ impl UniqClient {
         local_host: String,
     ) -> Result<Self> {
         let conn = connect_with_timeout(&remote_host, SERVER_PORT).await?;
-        let keepalive = TcpKeepalive::new()
-            .with_time(Duration::from_secs(TCP_KEEPIDLE))
-            .with_interval(Duration::from_secs(TCP_KEEPINTVL))
-            .with_retries(TCP_KEEPCNT);
-        SockRef::from(&conn).set_tcp_keepalive(&keepalive).unwrap();
+
+        SockRef::from(&conn)
+            .set_tcp_keepalive(&set_tcp_keepalive())
+            .unwrap();
         let stream = delimited_framed(conn);
 
         Ok(Self {

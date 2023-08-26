@@ -1,3 +1,8 @@
+use std::time::Duration;
+
+use socket2::TcpKeepalive;
+
+use crate::{TCP_KEEPCNT, TCP_KEEPIDLE, TCP_KEEPINTVL};
 use anyhow::{Context, Error, Result};
 use regex::Regex;
 use tokio::{
@@ -82,4 +87,19 @@ pub async fn bind(mut src: ReadHalf<TcpStream>, mut dst: WriteHalf<TcpStream>) -
         }
         dst.write_all(&buf[..n]).await?;
     }
+}
+#[inline]
+#[cfg(target_os = "windows")]
+pub fn set_tcp_keepalive() -> TcpKeepalive {
+    TcpKeepalive::new()
+        .with_time(Duration::from_secs(TCP_KEEPIDLE))
+        .with_interval(Duration::from_secs(TCP_KEEPINTVL))
+}
+#[inline]
+#[cfg(not(target_os = "windows"))]
+pub fn set_tcp_keepalive() -> TcpKeepalive {
+    TcpKeepalive::new()
+        .with_time(Duration::from_secs(TCP_KEEPIDLE))
+        .with_interval(Duration::from_secs(TCP_KEEPINTVL))
+        .with_retries(TCP_KEEPCNT)
 }

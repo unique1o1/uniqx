@@ -4,22 +4,21 @@ use shared::delimited::{
     delimited_framed_read, delimited_framed_write, DelimitedReadExt, DelimitedWriteExt,
 };
 use shared::structs::NewClient;
-use shared::utils::DeferCall;
+use shared::utils::{set_tcp_keepalive, DeferCall};
+use shared::Protocol;
 use shared::{
     defer,
     structs::{TunnelOpen, TunnelRequest},
     utils::validate_subdomain,
     SERVER_PORT,
 };
-use shared::{Protocol, TCP_KEEPCNT, TCP_KEEPIDLE, TCP_KEEPINTVL};
-use socket2::{SockRef, TcpKeepalive};
+use socket2::SockRef;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use std::time::Duration;
 use tokio::net::{TcpListener, TcpStream};
 use tracing::info;
 
-use crate::tcp_server::tcp_server::PublicTcpServer;
+use crate::tcp_server::tcp_server::TcpServer;
 use crate::tunnel::Tunnel;
 use crate::uniqx::ServerContext;
 
@@ -83,7 +82,7 @@ impl EventHandler for ControlServer {
                         .await?;
                     return Ok(());
                 }
-                let listener = PublicTcpServer::new(data.tcp_port.unwrap()).await;
+                let listener = TcpServer::new(data.tcp_port.unwrap()).await;
                 let context_clone = context.clone();
                 // let mut set = JoinSet::new();
 
@@ -124,12 +123,9 @@ impl ControlServer {
     pub async fn new(domain: String) -> Result<Self> {
         let addr = SocketAddr::from(([0, 0, 0, 0], SERVER_PORT));
         let listener = TcpListener::bind(addr).await?;
-        let keepalive = TcpKeepalive::new()
-            .with_time(Duration::from_secs(TCP_KEEPIDLE))
-            .with_interval(Duration::from_secs(TCP_KEEPINTVL))
-            .with_retries(TCP_KEEPCNT);
+
         SockRef::from(&listener)
-            .set_tcp_keepalive(&keepalive)
+            .set_tcp_keepalive(&set_tcp_keepalive())
             .unwrap();
         info!(?addr, "server listening");
         Ok(Self { listener, domain })

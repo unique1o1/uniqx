@@ -20,3 +20,4 @@ tracing = { workspace = true }
 regex = "1.9.3"
 clap = { workspace = true }
 serde_json = { workspace = true }
+socket2 = { workspace = true }

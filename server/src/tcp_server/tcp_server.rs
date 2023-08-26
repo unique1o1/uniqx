@@ -1,35 +1,20 @@
-use anyhow::{Context, Error, Result};
+use anyhow::{Context, Result};
 use async_trait::async_trait;
 use shared::{delimited::DelimitedWriteExt, structs::NewClient};
 
 use std::sync::Arc;
-use tokio::{
-    io::AsyncReadExt,
-    net::{TcpListener, TcpStream},
-};
+use tokio::net::{TcpListener, TcpStream};
 use tracing::info;
 use uuid::Uuid;
 
 use crate::uniqx::ServerContext;
 
 use super::tcp_listener::{EventHandler, TCPListener};
-pub struct PublicTcpServer {
+pub struct TcpServer {
     listener: TcpListener,
 }
 
-async fn parse_host(mut r: impl AsyncReadExt + Unpin) -> Result<(String, Vec<u8>)> {
-    let mut buffer = vec![0; 2048];
-    let size = r.read(&mut buffer).await?;
-    let buffer = &buffer[..size];
-    let text = String::from_utf8_lossy(buffer);
-    let left = text.find("Host: ").ok_or(Error::msg("no host detected"))? + 6;
-    let text = &text[left..];
-    let right = text.find('\n').ok_or(Error::msg("no host detected"))?;
-    let host = text[..right].trim().to_owned();
-    let subdomain = host.split('.').next().unwrap().to_owned();
-    Ok((subdomain, buffer.to_owned()))
-}
-impl PublicTcpServer {
+impl TcpServer {
     pub async fn new(port: u16) -> Self {
         let listener = TcpListener::bind(("0.0.0.0", port)).await.unwrap();
 
@@ -40,7 +25,7 @@ impl PublicTcpServer {
     }
 }
 #[async_trait]
-impl EventHandler for PublicTcpServer {
+impl EventHandler for TcpServer {
     async fn handle_conn(&self, stream: TcpStream, context: Arc<ServerContext>) -> Result<()> {
         let identifier = Uuid::new_v4().to_string();
 
@@ -63,7 +48,7 @@ impl EventHandler for PublicTcpServer {
     }
 }
 
-impl TCPListener for PublicTcpServer {
+impl TCPListener for TcpServer {
     fn listener(&self) -> &TcpListener {
         &self.listener
     }
