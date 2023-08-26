@@ -24,7 +24,7 @@ This section describes detailed usage for the `uniqx` CLI command.
 
 ### Local Forwarding
 
-You can forward a port on your local machine by using the `uniqx` command. This takes a positional argument, the local port to forward, as well as a mandatory `--remote-host` option, which specifies the address of the remote server and a subdomain to use.
+You can forward a port on your local machine by using the `uniqx` command. This takes a positional argument, the local port to forward, as well as a mandatory `--remote-host` option, which specifies the address of the remote server, and a `--subdomain` option.
 
 ### HTTP
 ```bash
@@ -33,7 +33,7 @@ uniqx client http --remote-host example.com --local-port 9000 --subdomain unique
 
 ### TCP
 ```bash
-uniqx tcp --port 61589 --remote-host example.com --local-port 5432 --subdomain db
+uniqx client tcp --port 61589 --remote-host example.com --local-port 5432 --subdomain db
 ```
 
 In the case of `TCP` you can pass in a `--port` option to pick a specific port on the remote to expose, although the command will fail if this port is not available. Also, passing `--local-host` allows you to expose a different host on your local area network besides the loopback address `localhost`.
@@ -41,7 +41,7 @@ In the case of `TCP` you can pass in a `--port` option to pick a specific port o
 The full options are shown below using --help option.
 
 ```bash
-uniqx --help
+uniqx client --help
 ```
 
 ## Deploy your own UNIQ tunnel server
@@ -51,7 +51,7 @@ You have to deploy your own tunnel server for the client to work.
 uniqx server --domain "example.com"
 ```
 
-That's all it takes! After the server starts running at a given address, you can then update the `uniq` command with option `--remote-host <ADDRESS>` to forward a local port to this remote server.
+That's all it takes! After the server starts running at a given address, you can then update the `uniqx` command with option `--remote-host <ADDRESS>` to forward a local port to this remote server.
 
 The full options for the `bore server` command are shown below.
 
