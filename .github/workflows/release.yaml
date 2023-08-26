@@ -122,6 +122,8 @@ jobs:
         id: vars
         run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
 
+      - uses: actions/checkout@v2
+
       - run: rustup default stable
       - run: rustup target add ${{ matrix.target }}
       - run: cargo build  --release --target ${{ matrix.target }}
