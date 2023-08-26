@@ -1,8 +1,7 @@
 use dashmap::DashMap;
-use shared::delimited::{DelimitedReadStream, DelimitedWriteStream};
+use shared::delimited::DelimitedWriteStream;
 use std::sync::Arc;
-use tokio::{io::WriteHalf, net::TcpStream, sync::Mutex};
-use tokio_util::codec::{AnyDelimiterCodec, FramedWrite};
+use tokio::{net::TcpStream, sync::Mutex};
 
 #[derive(Debug)]
 pub struct Tunnel {

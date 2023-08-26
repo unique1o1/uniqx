@@ -1,6 +1,5 @@
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use futures::StreamExt;
 use shared::delimited::{
     delimited_framed_read, delimited_framed_write, DelimitedReadExt, DelimitedWriteExt,
 };
@@ -12,7 +11,7 @@ use shared::{
     utils::validate_subdomain,
     SERVER_PORT,
 };
-use shared::{Protocol, NETWORK_TIMEOUT, TCP_KEEPCNT, TCP_KEEPIDLE, TCP_KEEPINTVL};
+use shared::{Protocol, TCP_KEEPCNT, TCP_KEEPIDLE, TCP_KEEPINTVL};
 use socket2::{SockRef, TcpKeepalive};
 use std::net::SocketAddr;
 use std::sync::Arc;

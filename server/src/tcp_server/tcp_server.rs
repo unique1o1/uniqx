@@ -1,18 +1,18 @@
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
 use shared::{delimited::DelimitedWriteExt, structs::NewClient};
-use socket2::{SockRef, TcpKeepalive};
-use std::{sync::Arc, time::Duration};
+
+use std::sync::Arc;
 use tokio::{
     io::AsyncReadExt,
     net::{TcpListener, TcpStream},
 };
 use tracing::info;
-use uuid::{uuid, Uuid};
+use uuid::Uuid;
 
 use crate::uniqx::ServerContext;
 
-use super::tcp_listener::{EventHandler, TCPListener, TcpServer};
+use super::tcp_listener::{EventHandler, TCPListener};
 pub struct PublicTcpServer {
     listener: TcpListener,
 }

@@ -1,11 +1,8 @@
-use std::{io::ErrorKind, sync::Arc};
+use std::sync::Arc;
 
 use async_trait::async_trait;
-use tokio::{
-    net::{TcpListener, TcpStream},
-    sync::{Mutex, RwLock},
-};
-use tracing::{error, info, info_span, warn, Instrument};
+use tokio::net::{TcpListener, TcpStream};
+use tracing::{error, info, info_span, Instrument};
 
 use crate::uniqx::ServerContext;
 use anyhow::Result;
