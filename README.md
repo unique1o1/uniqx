@@ -1,9 +1,79 @@
 
+# UNIQ
 
+A simple HTTP/TCP tunnel in Rust that exposes local ports to a remote server, bypassing standard NAT connection firewalls.
 
 ## Installation
 
-`curl --proto '=https' --tlsv1.2 -sSf https://yunik.com.np/installer.sh \
-    | bash -s -- --repo unique1o1/jprq --to /usr/local/bin`
+### Using Rust 
+---
+```bash
+$ cargo install --git github.com/unique1o1/uniq.git client
+```
+---
 
+## Using pre-built binary
+---
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://yunik.com.np/installer.sh \
+    | bash -s -- --repo unique1o1/uniq --to /usr/local/bin`
+```
+---
+
+
+## Detailed Usage
+
+This section describes detailed usage for the `uniq` CLI command.
+
+### Local Forwarding
+
+You can forward a port on your local machine by using the `uniq` command. This takes a positional argument, the local port to forward, as well as a mandatory `--remote-host` option, which specifies the address of the remote server and a subdomain to use.
+
+### HTTP
+---
+```bash
+uniq http --remote-host example.com --local-port 9000 --subdomain unique 
+```
+---
+
+
+### TCP
+---
+```bash
+uniq tcp --port 61589 --remote-host example.com --local-port 5432 --subdomain db
+```
+---
+
+In the case of `TCP` you can pass in a `--port` option to pick a specific port on the remote to expose, although the command will fail if this port is not available. Also, passing `--local-host` allows you to expose a different host on your local area network besides the loopback address `localhost`.
+
+The full options are shown below using --help option.
+
+---
+```bash
+uniq --help
+
+```
+---
+
+## Deploy your own UNIQ tunnel server
+You have to deploy your own tunnel server for the client to work.
+
+---
+```bash
+cargo install --git https://github.com/unique1o1/uniq.git server
+uniq-server --domain "example.com"
+```
+---
+
+That's all it takes! After the server starts running at a given address, you can then update the `uniq` command with option `--remote-host <ADDRESS>` to forward a local port to this remote server.
+
+The full options for the `bore server` command are shown below.
+
+---
+```bash
+    uniq-server --help
+```
+---
+
+The uniq tool has an implicit control port at `9876` that is used for creating new connections on demand. When the client initializes a connection, it sends a message to the server on the TCP control port, asking to proxy a selected protocol and remote port(for TCP). The server then responds with an acknowledgement and begins listening for external HTTP/TCP connections.
 

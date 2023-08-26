@@ -1,19 +1,17 @@
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
 use shared::{delimited::DelimitedWriteExt, structs::NewClient, utils::write_response};
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
+    io::AsyncReadExt,
     net::{TcpListener, TcpStream},
-    sync::{Mutex, RwLock},
 };
-use tracing::info;
-use uuid::{uuid, Uuid};
+use uuid::Uuid;
 
 use crate::uniq::ServerContext;
 
-use super::tcp_listener::{EventHandler, TCPListener, TcpServer};
-pub struct PublicHttpServer {
+use super::tcp_listener::{EventHandler, TCPListener};
+pub struct HttpServer {
     listener: TcpListener,
 }
 
@@ -29,17 +27,14 @@ async fn parse_host(mut r: impl AsyncReadExt + Unpin) -> Result<(String, Vec<u8>
     let subdomain = host.split('.').next().unwrap().to_owned();
     Ok((subdomain, buffer.to_owned()))
 }
-impl PublicHttpServer {
-    pub async fn new() -> Result<Self> {
-        let listener = TcpListener::bind(("0.0.0.0", 8009)).await?;
-        Ok(Self {
-            // listener: Arc::new(Mutex::new(listener)),
-            listener: listener,
-        })
+impl HttpServer {
+    pub async fn new(port: u16) -> Result<Self> {
+        let listener = TcpListener::bind(("0.0.0.0", port)).await?;
+        Ok(Self { listener: listener })
     }
 }
 #[async_trait]
-impl EventHandler for PublicHttpServer {
+impl EventHandler for HttpServer {
     async fn handle_conn(&self, mut stream: TcpStream, context: Arc<ServerContext>) -> Result<()> {
         let identifier = Uuid::new_v4().to_string();
         let Ok((subdomain, buffer)) = parse_host(&mut stream).await else {
@@ -69,7 +64,7 @@ impl EventHandler for PublicHttpServer {
     }
 }
 
-impl TCPListener for PublicHttpServer {
+impl TCPListener for HttpServer {
     fn listener(&self) -> &TcpListener {
         &self.listener
     }

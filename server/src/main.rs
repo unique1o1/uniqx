@@ -2,9 +2,8 @@ use std::sync::mpsc::channel;
 
 use anyhow::Result;
 
-use clap::{Arg, Parser};
+use clap::Parser;
 use server::uniq::Server;
-use shared::Protocol;
 use tracing::info;
 #[derive(Parser)]
 #[clap(author, version, about)]
@@ -12,6 +11,8 @@ struct Args {
     /// Domain being used for public access
     #[clap(short, long)]
     domain: String,
+    #[clap(long, default_value_t = 80)]
+    http_port: u16,
 }
 fn wait() {
     let (tx, rx) = channel();
@@ -22,7 +23,7 @@ fn wait() {
 }
 #[tokio::main]
 async fn run(args: Args) -> Result<()> {
-    let tunnel = Server::new(args.domain).await;
+    let tunnel = Server::new(args.domain, args.http_port).await;
     tunnel.start().await?;
     wait();
     Ok(())

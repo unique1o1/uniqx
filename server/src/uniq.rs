@@ -5,7 +5,7 @@ use tracing::info;
 
 use crate::{
     tcp_server::{
-        control_server::ControlServer, event_server::EventServer, http_server::PublicHttpServer,
+        control_server::ControlServer, event_server::EventServer, http_server::HttpServer,
         tcp_listener::TcpServer,
     },
     tunnel::Tunnel,
@@ -14,13 +14,15 @@ pub(crate) type ServerContext = DashMap<String, Tunnel>;
 
 pub struct Server {
     domain: String,
+    http_port: u16,
     server_context: Arc<ServerContext>,
 }
 impl Server {
-    pub async fn new(domain: String) -> Server {
+    pub async fn new(domain: String, http_port: u16) -> Server {
         Server {
-            domain: domain,
+            domain,
             server_context: Arc::new(ServerContext::default()),
+            http_port,
         }
     }
 
@@ -35,9 +37,8 @@ impl Server {
 
     pub async fn start(self) -> Result<()> {
         self.listen(ControlServer::new(self.domain.clone()).await?);
-        self.listen(PublicHttpServer::new().await?);
+        self.listen(HttpServer::new(self.http_port).await?);
         self.listen(EventServer::new().await?);
-        // this.http_listen();
         Ok(())
     }
 }
