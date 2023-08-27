@@ -53,14 +53,20 @@ jobs:
           - x86_64-unknown-linux-musl
     steps:
       - uses: actions/checkout@v2
-
+      - uses: XAMPPRocky/get-github-release@v1
+        id: cross
+        with:
+          owner: rust-embedded
+          repo: cross
+          matches: linux-musl
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Set output
         id: vars
         run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
 
       - run: rustup default stable
       - run: rustup target add ${{ matrix.target }}
-      - run: cargo build  --release --target ${{ matrix.target }}
+      - run: ${{ steps.cross.outputs.install_path }}  --release --target ${{ matrix.target }}
   windows:
     runs-on: windows-latest
     strategy:
