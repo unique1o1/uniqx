@@ -30,6 +30,10 @@ You can forward a port on your local machine by using the `uniqx` command. This 
 ```bash
 uniqx client http --remote-host example.com --local-port 9000 --subdomain unique
 ```
+For enable console UI
+```bash
+uniqx client http --remote-host example.com --local-port 9000 --subdomain unique --console
+```
 
 ### TCP
 ```bash
@@ -57,7 +61,7 @@ The full options for the `bore server` command are shown below.
 
 
 ```bash
-    uniqx server --help
+uniqx server --help
 ```
 ---
 The uniqx tool has an implicit control port at `9876` that is used for creating new connections on demand. When the client initializes a connection, it sends a message to the server on the TCP control port, asking to proxy a selected protocol and remote port(for TCP). The server then responds with an acknowledgement and begins listening for external HTTP/TCP connections.
