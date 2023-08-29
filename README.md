@@ -1,5 +1,5 @@
 
-# UNIQ
+# UNIQX
 
 A simple HTTP/TCP tunnel in Rust that exposes local ports to a remote server, bypassing standard NAT connection firewalls.
 
