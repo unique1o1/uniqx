@@ -16,8 +16,8 @@ name = "uniqx"
 path = "src/main.rs"
 
 [dependencies]
-server = { path = "server" }
 client = { path = "client" }
+server = { path = "server" }
 tracing-subscriber = { workspace = true }
 tokio = { workspace = true }
 shared = { path = "shared" }

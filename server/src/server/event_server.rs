@@ -5,7 +5,6 @@ use anyhow::{Error, Result};
 use shared::{
     delimited::{delimited_framed, DelimitedReadExt},
     structs::NewClient,
-    utils::proxy,
     EVENT_SERVER_PORT,
 };
 use tokio::{
@@ -13,7 +12,7 @@ use tokio::{
     net::{TcpListener, TcpStream},
 };
 
-use crate::uniqx::ServerContext;
+use crate::{uniqx::ServerContext, util::proxy};
 
 use super::tcp_listener::{EventHandler, TCPListener};
 

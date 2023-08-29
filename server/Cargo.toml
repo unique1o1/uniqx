@@ -6,7 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# crossbeam = { workspace = true }
 anyhow = { workspace = true }
 clap = { workspace = true }
 shared = { path = "../shared" }
@@ -17,7 +16,4 @@ dashmap = { workspace = true }
 tracing = { workspace = true }
 ctrlc = "3.4.0"
 async-trait = "0.1.73"
-futures = "0.3.28"
-tokio-util = { workspace = true }
-
 socket2 = { workspace = true }

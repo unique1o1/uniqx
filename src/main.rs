@@ -31,6 +31,9 @@ enum Command {
         /// The local host to expose.
         #[clap(short, long, value_name = "HOST", default_value = "localhost")]
         local_host: String,
+        // Enable request console UI
+        #[clap(short, long, value_name = "HOST", default_value = "false")]
+        console: bool,
     },
     Server {
         /// Domain being used for public access
@@ -53,6 +56,7 @@ async fn run(command: Command) -> Result<()> {
             remote_host,
             subdomain,
             local_host,
+            console,
         } => {
             let client = UniqxClient::new(
                 protocol,
@@ -61,6 +65,7 @@ async fn run(command: Command) -> Result<()> {
                 remote_host,
                 subdomain,
                 local_host,
+                console,
             )
             .await?;
             client.start().await?;
@@ -74,13 +79,14 @@ async fn run(command: Command) -> Result<()> {
 }
 fn main() -> Result<()> {
     tracing_subscriber::fmt()
+        .with_level(true)
         .with_file(true)
         // Display source code line numbers
         .with_line_number(true)
         // Display the thread ID an event was recorded on
         .with_thread_ids(true)
         // Don't display the event's target (module path)
-        .with_target(false)
+        .with_target(true)
         // Build the subscriber
         .init();
     run(Args::parse().command)

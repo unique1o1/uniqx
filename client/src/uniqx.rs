@@ -1,8 +1,7 @@
 use std::process::exit;
 use std::sync::Arc;
 
-// use crate::Addrgs;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use shared::connect_with_timeout;
 use shared::delimited::delimited_framed;
 use shared::delimited::DelimitedReadExt;
@@ -11,15 +10,19 @@ use shared::delimited::DelimitedWriteExt;
 use shared::structs::NewClient;
 use shared::structs::TunnelOpen;
 use shared::structs::TunnelRequest;
-use shared::utils::proxy;
 use shared::utils::set_tcp_keepalive;
 use shared::Protocol;
 use shared::EVENT_SERVER_PORT;
 use shared::SERVER_PORT;
 use socket2::SockRef;
+use tokio::io::{self};
 use tracing::error;
-use tracing::info;
-// use crate::console::Conn
+
+use crate::console;
+use crate::console::handler::ConsoleHandler;
+use crate::util::bind;
+use crate::util::bind_with_console;
+
 pub struct UniqxClient {
     local_port: u16,
     remote_host: String,
@@ -27,7 +30,9 @@ pub struct UniqxClient {
     protocol: Protocol,
     subdomain: String,
     port: Option<u16>,
+    console: bool,
     conn: Option<DelimitedStream>,
+    console_handler: Option<ConsoleHandler>,
 }
 
 impl UniqxClient {
@@ -38,6 +43,7 @@ impl UniqxClient {
         remote_host: String,
         subdomain: String,
         local_host: String,
+        console: bool,
     ) -> Result<Self> {
         let conn = connect_with_timeout(&remote_host, SERVER_PORT).await?;
 
@@ -53,24 +59,28 @@ impl UniqxClient {
             local_host,
             subdomain,
             protocol,
+            console,
             conn: Some(stream),
+            console_handler: None,
         })
     }
 
     pub async fn handle_request(&self, data: NewClient) -> Result<()> {
-        info!("connecting to local server and http event server");
         let localhost_conn = connect_with_timeout(&self.local_host, self.local_port).await?;
         let mut http_event_stream =
             connect_with_timeout(&self.remote_host, EVENT_SERVER_PORT).await?;
         delimited_framed(&mut http_event_stream)
             .send_delimited(data)
             .await?;
-        // let (s1_read, s1_write) = io::split(localhost_conn);
-        // let (s2_read, s2_write) = io::split(http_event_stream);
-        // tokio::spawn(async move { bind(s1_read, s2_write).await.context("cant read from s1") });
-        // bind(s2_read, s1_write).await.context("cant read from s2")?;
-        proxy(localhost_conn, http_event_stream).await?;
-        // proxy(http_event_stream, localhost_conn);
+        let (s1_read, s1_write) = io::split(localhost_conn);
+        let (s2_read, s2_write) = io::split(http_event_stream);
+        if self.console {
+            let (req_tx, res_tx) = self.console_handler.clone().unwrap().init_transmitter();
+            tokio::spawn(async { bind_with_console(s1_read, s2_write, res_tx).await });
+            return bind_with_console(s2_read, s1_write, req_tx).await;
+        }
+        tokio::spawn(async move { bind(s1_read, s2_write).await.context("cant read from s1") });
+        bind(s2_read, s1_write).await.context("cant read from s2")?;
         Ok(())
     }
 
@@ -100,17 +110,15 @@ impl UniqxClient {
             self.local_host,
             self.local_port
         );
+        if self.console {
+            println!("Console: \t http://{}:{}", self.local_host, 9874);
+            self.console_handler = Some(console::server::start());
+        }
         let this: Arc<UniqxClient> = Arc::new(self);
         loop {
             let data: NewClient = conn.recv_delimited().await?;
             let this = this.clone();
-            tokio::spawn(async move {
-                this.handle_request(data).await.unwrap();
-            });
+            tokio::spawn(async move { this.handle_request(data).await });
         }
-        // match self.protocol {
-        //     Protocol::HTTP => {}
-        //     Protocol::TCP => loop {},
-        // }
     }
 }

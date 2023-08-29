@@ -1,6 +1,6 @@
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
-use shared::{delimited::DelimitedWriteExt, structs::NewClient, utils::write_response};
+use shared::{delimited::DelimitedWriteExt, structs::NewClient};
 use std::sync::Arc;
 use tokio::{
     io::AsyncReadExt,
@@ -8,7 +8,7 @@ use tokio::{
 };
 use uuid::Uuid;
 
-use crate::uniqx::ServerContext;
+use crate::{uniqx::ServerContext, util::write_response};
 
 use super::tcp_listener::{EventHandler, TCPListener};
 pub struct HttpServer {
