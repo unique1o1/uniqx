@@ -8,12 +8,12 @@ pub fn str_from_u8_nul_utf8(utf8_src: &[u8]) -> &str {
         .iter()
         .position(|&c| c == b'\0')
         .unwrap_or(utf8_src.len()); // default to length if no `\0` present
-    std::str::from_utf8(&utf8_src[0..nul_range_end]).unwrap()
+    std::str::from_utf8(&utf8_src[0..nul_range_end]).unwrap_or("unable to parse utf8")
 }
 #[derive(Serialize)]
 pub struct ConsoleRequest {
     #[serde(rename = "id")]
-    id: String,
+    pub id: String,
     #[serde(rename = "method")]
     method: String,
     #[serde(rename = "url")]
@@ -27,7 +27,7 @@ pub struct ConsoleRequest {
 #[derive(Serialize)]
 pub struct ConsoleResponse {
     #[serde(rename = "request_id")]
-    request_id: String,
+    pub request_id: String,
     #[serde(rename = "status")]
     status: u16,
     #[serde(rename = "headers")]

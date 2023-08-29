@@ -27,6 +27,7 @@ pub async fn bind_with_console<T: Transmitter + Debug>(
 ) -> Result<()> {
     let mut was_segmented = false;
     let mut console_data: Vec<u8> = vec![];
+    let mut req_count = 0;
     loop {
         let mut buf = [0u8; 4096];
 
@@ -37,9 +38,14 @@ pub async fn bind_with_console<T: Transmitter + Debug>(
         }
         dst.write_all(&buf[..n]).await?;
         if !was_segmented {
+            req_count += 1; // only increment req_count if the previous request was not segmented
             console_data.clear();
         }
         console_data.extend(&buf[..n]);
-        was_segmented = sender.send(console_data.clone()).await?;
+        was_segmented = sender
+            .send(console_data.clone(), req_count)
+            .await
+            .unwrap_or(false);
     }
+    // Ok(())
 }
