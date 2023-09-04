@@ -32,7 +32,7 @@ enum Command {
         #[clap(short, long, value_name = "HOST", default_value = "localhost")]
         local_host: String,
         // Enable request console UI
-        #[clap(short, long, value_name = "HOST", default_value = "false")]
+        #[clap(short, long, default_value = "false")]
         console: bool,
     },
     Server {

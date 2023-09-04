@@ -75,7 +75,7 @@ impl UniqxClient {
             .await?;
         let (s1_read, s1_write) = io::split(localhost_conn);
         let (s2_read, s2_write) = io::split(http_event_stream);
-        if self.console {
+        if self.protocol == Protocol::HTTP && self.console {
             let (req_tx, res_tx) = self.console_handler.clone().unwrap().init_transmitter();
             tokio::spawn(async { bind_with_console(s1_read, s2_write, res_tx).await });
             return bind_with_console(s2_read, s1_write, req_tx).await;

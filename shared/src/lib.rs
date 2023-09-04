@@ -23,7 +23,7 @@ use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use tokio::{net::TcpStream, time::timeout};
 
-#[derive(Serialize, Deserialize, Debug, Clone, ValueEnum)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, ValueEnum)]
 pub enum Protocol {
     HTTP,
     TCP,
