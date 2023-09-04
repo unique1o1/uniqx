@@ -1,6 +1,3 @@
-use std::process::exit;
-use std::sync::Arc;
-
 use anyhow::{Context, Result};
 use shared::connect_with_timeout;
 use shared::delimited::delimited_framed;
@@ -15,8 +12,12 @@ use shared::Protocol;
 use shared::EVENT_SERVER_PORT;
 use shared::SERVER_PORT;
 use socket2::SockRef;
+use std::process::exit;
+use std::sync::Arc;
 use tokio::io::{self};
 use tracing::error;
+use tracing::info_span;
+use tracing::Instrument;
 
 use crate::console;
 use crate::console::handler::ConsoleHandler;
@@ -111,14 +112,23 @@ impl UniqxClient {
             self.local_port
         );
         if self.console {
-            println!("Console: \t http://{}:{}", self.local_host, 9874);
-            self.console_handler = Some(console::server::start());
+            self.console_handler = Some(console::server::start().await);
+
+            println!(
+                "Console: \t http://{}:{}",
+                self.local_host,
+                self.console_handler.as_ref().unwrap().port
+            );
         }
         let this: Arc<UniqxClient> = Arc::new(self);
         loop {
             let data: NewClient = conn.recv_delimited().await?;
             let this = this.clone();
-            tokio::spawn(async move { this.handle_request(data).await });
+            let identifier = data.public_conn_identifier.clone();
+            tokio::spawn(
+                async move { this.handle_request(data).await }
+                    .instrument(info_span!("control", ?identifier)),
+            );
         }
     }
 }

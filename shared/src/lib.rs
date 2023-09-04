@@ -1,4 +1,3 @@
-//! Shared data structures, utilities, and protocol definitions.
 use std::time::Duration;
 /// TCP port used for control connections with the server.
 pub const CONTROL_PORT: u16 = 7835;

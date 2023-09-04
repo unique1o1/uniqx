@@ -55,4 +55,3 @@ impl EventHandler for EventServer {
         Ok(())
     }
 }
-// impl TcpServer for HttpEventServer {}

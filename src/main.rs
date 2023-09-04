@@ -79,6 +79,7 @@ async fn run(command: Command) -> Result<()> {
 }
 fn main() -> Result<()> {
     tracing_subscriber::fmt()
+        .with_env_filter("server=info,client=info")
         .with_level(true)
         .with_file(true)
         // Display source code line numbers

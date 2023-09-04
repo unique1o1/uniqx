@@ -1,5 +1,6 @@
 use actix_web::{
     get,
+    middleware::Logger,
     web::{self, Bytes},
     App, HttpResponse, HttpServer, Responder,
 };
@@ -25,11 +26,12 @@ async fn static_handler(file: &str, context_type: &str) -> impl Responder {
         .body(file.to_string())
 }
 
-pub fn start() -> ConsoleHandler {
+pub async fn start() -> ConsoleHandler {
     let (tx, _) = tokio::sync::broadcast::channel(100);
     let data = web::Data::new(tx.clone());
-    let server = HttpServer::new(move || {
+    let listner = HttpServer::new(move || {
         App::new()
+            .wrap(Logger::default())
             .app_data(data.clone())
             .service(event)
             .route(
@@ -46,10 +48,10 @@ pub fn start() -> ConsoleHandler {
                 web::get().to(|| static_handler(include_str!("static/style.css"), "text/css")),
             )
     })
-    .bind(("127.0.0.1", 9874))
-    .unwrap()
-    .disable_signals()
-    .run();
-    tokio::spawn(server);
-    ConsoleHandler::new(tx)
+    .bind(("127.0.0.1", 0))
+    .unwrap();
+
+    let port = listner.addrs()[0].port();
+    tokio::spawn(listner.disable_signals().run());
+    ConsoleHandler::new(tx, port)
 }

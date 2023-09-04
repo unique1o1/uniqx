@@ -8,11 +8,12 @@ use super::parser::{parse_http_request, parse_http_resonse};
 #[derive(Clone)]
 pub struct ConsoleHandler {
     tx: Sender<Bytes>,
+    pub port: u16,
 }
 
 impl ConsoleHandler {
-    pub fn new(tx: Sender<Bytes>) -> Self {
-        Self { tx }
+    pub fn new(tx: Sender<Bytes>, port: u16) -> Self {
+        Self { tx, port }
     }
     pub fn init_transmitter(&self) -> (RequestTransmitter, ResponseTransmitter) {
         let uuid = Uuid::new_v4();
