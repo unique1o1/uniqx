@@ -1,6 +1,10 @@
 use anyhow::{Ok, Result};
 use dashmap::DashMap;
-use std::sync::{mpsc::channel, Arc};
+use std::{
+    sync::{mpsc::channel, Arc},
+    time::Duration,
+};
+use tokio::time;
 use tracing::info;
 
 use crate::{
@@ -36,6 +40,7 @@ impl UniqxServer {
     }
 
     pub async fn start(self) -> Result<()> {
+        time::sleep(Duration::from_millis(100000)).await;
         self.listen(ControlServer::new(self.domain.clone()).await?);
         self.listen(HttpServer::new(self.http_port).await?);
         self.listen(EventServer::new().await?);

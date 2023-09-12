@@ -33,7 +33,6 @@ pub async fn bind_with_console<T: Transmitter + Debug>(
 
         let n: usize = src.read(&mut buf).await?;
         if n == 0 {
-            info!("connection disconnected");
             return Ok(());
         }
         dst.write_all(&buf[..n]).await?;

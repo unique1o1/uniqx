@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use shared::connect_with_timeout;
 use shared::delimited::delimited_framed;
 use shared::delimited::DelimitedReadExt;
@@ -7,6 +7,7 @@ use shared::delimited::DelimitedWriteExt;
 use shared::structs::NewClient;
 use shared::structs::TunnelOpen;
 use shared::structs::TunnelRequest;
+use shared::utils::proxy;
 use shared::utils::set_tcp_keepalive;
 use shared::Protocol;
 use shared::EVENT_SERVER_PORT;
@@ -16,12 +17,12 @@ use std::process::exit;
 use std::sync::Arc;
 use tokio::io::{self};
 use tracing::error;
+use tracing::info;
 use tracing::info_span;
 use tracing::Instrument;
 
 use crate::console;
 use crate::console::handler::ConsoleHandler;
-use crate::util::bind;
 use crate::util::bind_with_console;
 
 pub struct UniqxClient {
@@ -73,15 +74,19 @@ impl UniqxClient {
         delimited_framed(&mut http_event_stream)
             .send_delimited(data)
             .await?;
-        let (s1_read, s1_write) = io::split(localhost_conn);
-        let (s2_read, s2_write) = io::split(http_event_stream);
+
         if self.protocol == Protocol::HTTP && self.console {
+            let (s1_read, s1_write) = io::split(localhost_conn);
+            let (s2_read, s2_write) = io::split(http_event_stream);
             let (req_tx, res_tx) = self.console_handler.clone().unwrap().init_transmitter();
-            tokio::spawn(async { bind_with_console(s1_read, s2_write, res_tx).await });
-            return bind_with_console(s2_read, s1_write, req_tx).await;
+            tokio::select! {
+                res= bind_with_console(s1_read, s2_write, res_tx).instrument(info_span!("Binder", "localhost reader")) => { info!("local connection discounted");res},
+                res= bind_with_console(s2_read, s1_write, req_tx).instrument(info_span!("Binder", "http event reader")) =>  {info!("event connection discounted"); res}
+            }?
+        } else {
+            proxy(localhost_conn, http_event_stream).await?;
         }
-        tokio::spawn(async move { bind(s1_read, s2_write).await.context("cant read from s1") });
-        bind(s2_read, s1_write).await.context("cant read from s2")?;
+
         Ok(())
     }
 

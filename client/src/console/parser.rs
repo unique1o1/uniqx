@@ -1,5 +1,6 @@
 use serde::Serialize;
 use std::collections::HashMap;
+use tracing::info;
 
 use anyhow::Result;
 
@@ -38,7 +39,12 @@ pub struct ConsoleResponse {
 pub fn parse_http_resonse(id: String, data: Vec<u8>) -> Result<ConsoleResponse> {
     let mut headers = [httparse::EMPTY_HEADER; 64];
     let mut res = httparse::Response::new(&mut headers);
-    let offset = res.parse(&data)?.unwrap(); // assuming that the response is complete
+    let status = res.parse(&data)?; // assuming that the response is complete
+                                    // if status.is_partial() {
+                                    //     info!("is partial: _> {:?}", str_from_u8_nul_utf8(&data));
+                                    //     return Err(anyhow::anyhow!("is partial"));
+                                    // }
+    let offset = status.unwrap();
     let headers: HashMap<String, Vec<String>> = res
         .headers
         .iter()
@@ -59,7 +65,13 @@ pub fn parse_http_resonse(id: String, data: Vec<u8>) -> Result<ConsoleResponse> 
 pub fn parse_http_request(id: String, data: Vec<u8>) -> Result<ConsoleRequest> {
     let mut headers = [httparse::EMPTY_HEADER; 64];
     let mut req = httparse::Request::new(&mut headers);
-    let offset = req.parse(&data)?.unwrap(); // assuming that the response is complete
+
+    let status = req.parse(&data)?; // assuming that the response is complete
+    if status.is_partial() {
+        info!("is partial: _> {:?}", str_from_u8_nul_utf8(&data));
+        return Err(anyhow::anyhow!("is partial"));
+    }
+    let offset = status.unwrap();
     let headers: HashMap<String, Vec<String>> = req
         .headers
         .iter()
