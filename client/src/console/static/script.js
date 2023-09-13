@@ -190,7 +190,7 @@ const updateResponseBody = (responseBody) => {
 	}
 	responseBodyEl.innerHTML = `
     <pre><code class="language-json text-normal">${prettifyJson(
-			responseBody
+			String.fromCharCode.apply(null, responseBody)
 		)}</code></pre>`;
 };
 
@@ -206,7 +206,7 @@ const updateRequestBody = (requestBody) => {
 	}
 	requestBodyEl.innerHTML = `
     <pre><code class="language-json text-normal">${prettifyJson(
-			requestBody
+			String.fromCharCode.apply(null, requestBody)
 		)}</code></pre>`;
 };
 

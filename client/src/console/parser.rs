@@ -1,8 +1,6 @@
-use serde::Serialize;
-use std::collections::HashMap;
-use tracing::info;
-
 use anyhow::Result;
+use serde::Serialize;
+use std::{collections::HashMap, vec};
 
 pub fn str_from_u8_nul_utf8(utf8_src: &[u8]) -> &str {
     let nul_range_end = utf8_src
@@ -20,7 +18,7 @@ pub struct ConsoleRequest {
     #[serde(rename = "url")]
     url: String,
     #[serde(rename = "body")]
-    pub body: String,
+    pub body: Vec<u8>,
     #[serde(rename = "headers")]
     pub headers: HashMap<String, Vec<String>>,
 }
@@ -34,7 +32,7 @@ pub struct ConsoleResponse {
     #[serde(rename = "headers")]
     pub headers: HashMap<String, Vec<String>>,
     #[serde(rename = "body")]
-    pub body: String,
+    pub body: Vec<u8>,
 }
 pub fn parse_http_resonse(id: String, data: Vec<u8>) -> Result<ConsoleResponse> {
     let mut headers = [httparse::EMPTY_HEADER; 64];
@@ -56,7 +54,7 @@ pub fn parse_http_resonse(id: String, data: Vec<u8>) -> Result<ConsoleResponse> 
         })
         .collect();
     Ok(ConsoleResponse {
-        body: str_from_u8_nul_utf8(&data[offset..]).to_string(),
+        body: data[offset..].into(),
         headers,
         request_id: id.to_string(),
         status: res.code.unwrap(),
@@ -68,7 +66,6 @@ pub fn parse_http_request(id: String, data: Vec<u8>) -> Result<ConsoleRequest> {
 
     let status = req.parse(&data)?; // assuming that the response is complete
     if status.is_partial() {
-        info!("is partial: _> {:?}", str_from_u8_nul_utf8(&data));
         return Err(anyhow::anyhow!("is partial"));
     }
     let offset = status.unwrap();
@@ -83,7 +80,7 @@ pub fn parse_http_request(id: String, data: Vec<u8>) -> Result<ConsoleRequest> {
         })
         .collect();
     Ok(ConsoleRequest {
-        body: str_from_u8_nul_utf8(&data[offset..]).to_string(),
+        body: data[offset..].into(),
         headers,
         id,
         method: req.method.unwrap().to_string(),

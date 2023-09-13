@@ -46,5 +46,4 @@ pub async fn bind_with_console<T: Transmitter + Debug>(
             .await
             .unwrap_or(false);
     }
-    // Ok(())
 }

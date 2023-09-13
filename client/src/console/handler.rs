@@ -1,10 +1,9 @@
+use super::parser::{parse_http_request, parse_http_resonse};
 use actix_web::{body::to_bytes, web::Bytes};
 use anyhow::Result;
 use async_trait::async_trait;
 use tokio::sync::broadcast::Sender;
 use uuid::Uuid;
-
-use super::parser::{parse_http_request, parse_http_resonse};
 #[derive(Clone)]
 pub struct ConsoleHandler {
     tx: Sender<Bytes>,
@@ -59,18 +58,13 @@ impl Transmitter for ResponseTransmitter {
                 return Ok(true);
             }
             if content_length_value > 65536 {
-                data.body = "body too large".to_string();
+                data.body = Vec::from_iter(*b"body too large");
             }
         }
         data.request_id = format!("{}-{:0>5}", self.id, req_count);
-        self.tx.send(
-            to_bytes(format!(
-                "data:{}\n\n",
-                serde_json::to_string(&data).unwrap()
-            ))
-            .await
-            .unwrap(),
-        )?;
+
+        self.tx
+            .send(to_bytes(format!("data:{}\n\n", serde_json::to_string(&data)?)).await?)?;
         Ok(false)
     }
 }
@@ -87,7 +81,7 @@ impl Transmitter for RequestTransmitter {
                 return Ok(true);
             }
             if content_length_value > 65536 {
-                data.body = "body too large".to_string();
+                data.body = Vec::from_iter(*b"body too large");
             }
         }
         data.id = format!("{}-{:0>5}", self.id, req_count);
