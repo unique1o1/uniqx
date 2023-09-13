@@ -128,14 +128,16 @@ jobs:
       - name: Set output
         id: vars
         run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+        shell: bash
       - run: rustup default stable
       - run: rustup target add ${{ matrix.target }}
       - run: cargo build  --release --target ${{ matrix.target }}
 
       - run: |
           cd ./target/${{ matrix.target }}/release/
-          7z a "${{ env.BIN }}.tar.gz" "${{ env.BIN }}.exe"
+          tar -czvf ${{ env.BIN }}.tar.gz ${{ env.BIN }}.exe
           mv "${{ env.BIN }}.tar.gz" $GITHUB_WORKSPACE
+
         shell: bash
         # We're using using a fork of `actions/create-release` that detects
         # whether a release is already available or not first.
