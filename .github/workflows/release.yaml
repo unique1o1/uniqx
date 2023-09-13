@@ -124,20 +124,18 @@ jobs:
           - i686-pc-windows-msvc
           - x86_64-pc-windows-msvc
     steps:
+      - uses: actions/checkout@v2
       - name: Set output
         id: vars
         run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
-
-      - uses: actions/checkout@v2
-
       - run: rustup default stable
       - run: rustup target add ${{ matrix.target }}
       - run: cargo build  --release --target ${{ matrix.target }}
 
       - run: |
           cd ./target/${{ matrix.target }}/release/
-          7z a "${{ env.BIN }}.zip" "${{ env.BIN }}.exe"
-          mv "${{ env.BIN }}.zip" $GITHUB_WORKSPACE
+          7z a "${{ env.BIN }}.tar.gz" "${{ env.BIN }}.exe"
+          mv "${{ env.BIN }}.tar.gz" $GITHUB_WORKSPACE
         shell: bash
         # We're using using a fork of `actions/create-release` that detects
         # whether a release is already available or not first.
@@ -158,6 +156,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.BIN }}.zip
-          asset_name: ${{ env.BIN }}-${{steps.vars.outputs.tag}}-${{ matrix.target }}.zip
-          asset_content_type: application/zip
+          asset_path: ${{ env.BIN }}.tar.gz
+          asset_name: ${{ env.BIN }}-${{steps.vars.outputs.tag}}-${{ matrix.target }}.tar.gz
+          asset_content_type: application/gzip

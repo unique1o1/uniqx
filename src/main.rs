@@ -75,6 +75,7 @@ async fn run(command: Command) -> Result<()> {
             tunnel.start().await?;
         }
     }
+
     Ok(())
 }
 fn main() -> Result<()> {
