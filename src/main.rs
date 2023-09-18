@@ -72,7 +72,7 @@ async fn run(command: Command) -> Result<()> {
             client.start().await?;
         }
         Command::Server { domain, http_port } => {
-            let tunnel = server::uniqx::UniqxServer::new(domain, http_port).await;
+            let tunnel = server::uniqx::UniqxServer::new(domain, http_port);
             tunnel.start().await?;
             let (tx, rx) = channel();
             ctrlc::set_handler(move || tx.send(()).expect("Could not send signal on channel."))

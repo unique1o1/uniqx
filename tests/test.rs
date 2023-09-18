@@ -1,11 +1,8 @@
-use std::cell::OnceCell;
-use std::process::exit;
 use std::sync::OnceLock;
 use std::time::Duration;
 
 use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
 use client::uniqx::UniqxClient;
-use rstest::rstest;
 use server::uniqx::UniqxServer;
 use shared::utils::validate_subdomain;
 use shared::SERVER_PORT;
@@ -20,12 +17,11 @@ use tokio::time;
 static GUARD: OnceLock<Mutex<()>> = OnceLock::new();
 /// Spawn the server, giving some time for the control port TcpListener to start.
 async fn spawn_server() {
-    tokio::spawn(UniqxServer::new("localhost".to_owned(), 8001).await.start());
-    // time::sleep(Duration::from_millis(900)).await;
+    tokio::spawn(UniqxServer::new("localhost".to_owned(), 65454).start());
 }
 
 /// Spawns a client with randomly assigned ports, returning the listener and remote address.
-async fn spawn_http_client() -> Result<SocketAddr> {
+async fn spawn_http_client() -> Result<(SocketAddr, SocketAddr)> {
     const LOCAL_POST: u16 = 65432;
     let client = UniqxClient::new(
         shared::Protocol::HTTP,
@@ -40,8 +36,9 @@ async fn spawn_http_client() -> Result<SocketAddr> {
     .unwrap();
     tokio::spawn(client.start());
     let local_http_addr: SocketAddr = ([127, 0, 0, 1], LOCAL_POST).into();
+    let remote_addr: SocketAddr = ([127, 0, 0, 1], 65454).into();
     tokio::time::sleep(Duration::from_millis(100)).await;
-    Ok(local_http_addr)
+    Ok((remote_addr, local_http_addr))
 }
 /// Spawns a client with randomly assigned ports, returning the listener and remote address.
 async fn spawn_tcp_client() -> Result<(TcpListener, SocketAddr)> {
@@ -140,25 +137,25 @@ async fn http_proxy() -> Result<()> {
 
     spawn_server().await;
 
-    let addr = spawn_http_client().await?;
+    let (remote_addr, local_addr) = spawn_http_client().await?;
 
     let listner = HttpServer::new(move || {
         App::new().route(
             "/test",
-            web::get().to(|req: HttpRequest| async {
-                // assert_eq!(req.query_string(), "foo=bar");
+            web::get().to(|req: HttpRequest| async move {
+                assert_eq!(req.query_string(), "foo=bar");
                 HttpResponse::Ok().body("Hello world!")
             }),
         )
     })
-    .bind(addr)
+    .bind(local_addr)
     .unwrap();
     tokio::spawn(listner.disable_signals().run());
 
-    let mut stream = TcpStream::connect(addr).await?;
+    let mut stream = TcpStream::connect(remote_addr).await?;
 
     let request = "GET /test?foo=bar HTTP/1.1\r\n\
-                   Host: localhost:8080\r\n\
+                   Host: test.localhost:65454\r\n\
                    Connection: close\r\n\
                    \r\n";
 

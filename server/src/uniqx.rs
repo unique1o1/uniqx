@@ -18,7 +18,7 @@ pub struct UniqxServer {
     server_context: Arc<ServerContext>,
 }
 impl UniqxServer {
-    pub async fn new(domain: String, http_port: u16) -> UniqxServer {
+    pub fn new(domain: String, http_port: u16) -> UniqxServer {
         UniqxServer {
             domain,
             server_context: Arc::new(ServerContext::default()),
