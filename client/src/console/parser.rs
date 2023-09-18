@@ -2,13 +2,6 @@ use anyhow::Result;
 use serde::Serialize;
 use std::{collections::HashMap, vec};
 
-pub fn str_from_u8_nul_utf8(utf8_src: &[u8]) -> &str {
-    let nul_range_end = utf8_src
-        .iter()
-        .position(|&c| c == b'\0')
-        .unwrap_or(utf8_src.len()); // default to length if no `\0` present
-    std::str::from_utf8(&utf8_src[0..nul_range_end]).unwrap_or("unable to parse utf8")
-}
 #[derive(Serialize)]
 pub struct ConsoleRequest {
     #[serde(rename = "id")]
@@ -38,10 +31,7 @@ pub fn parse_http_resonse(id: String, data: Vec<u8>) -> Result<ConsoleResponse> 
     let mut headers = [httparse::EMPTY_HEADER; 64];
     let mut res = httparse::Response::new(&mut headers);
     let status = res.parse(&data)?; // assuming that the response is complete
-                                    // if status.is_partial() {
-                                    //     info!("is partial: _> {:?}", str_from_u8_nul_utf8(&data));
-                                    //     return Err(anyhow::anyhow!("is partial"));
-                                    // }
+
     let offset = status.unwrap();
     let headers: HashMap<String, Vec<String>> = res
         .headers

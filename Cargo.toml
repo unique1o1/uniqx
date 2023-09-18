@@ -23,6 +23,7 @@ tokio = { workspace = true }
 shared = { path = "shared" }
 clap = { workspace = true }
 anyhow = { workspace = true }
+ctrlc = "3.4.0"
 [workspace]
 members = ["server", "client", "shared"]
 resolver = "2"
@@ -32,6 +33,7 @@ dashmap = { version = "5.5.0" }
 anyhow = { version = "1.0.72" }
 # crossbeam = "0.8"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter", "fmt"] }
+httparse = "1.8.0"
 clap = { version = "4.3.21", features = ["derive", "env"] }
 tokio = { version = "1.31.0", features = [
     "rt-multi-thread",
@@ -62,3 +64,5 @@ strip = true
 
 [dev-dependencies]
 rstest = "0.18.2"
+actix-web = { version = "4" }
+httparse = { workspace = true }

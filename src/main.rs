@@ -1,6 +1,7 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use shared::Protocol;
+use std::sync::mpsc::channel;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about)]
@@ -73,6 +74,10 @@ async fn run(command: Command) -> Result<()> {
         Command::Server { domain, http_port } => {
             let tunnel = server::uniqx::UniqxServer::new(domain, http_port).await;
             tunnel.start().await?;
+            let (tx, rx) = channel();
+            ctrlc::set_handler(move || tx.send(()).expect("Could not send signal on channel."))
+                .expect("Error setting Ctrl-C handler");
+            rx.recv().expect("Could not receive from channel.");
         }
     }
 

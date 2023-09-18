@@ -21,7 +21,7 @@ tokio-util = { workspace = true }
 actix-web = { version = "4" }
 futures-util = { version = "0.3.28", features = ["sink"] }
 async-stream = "0.3.5"
-httparse = "1.8.0"
+httparse = { workspace = true }
 tokio-stream = { version = "0.1.14", features = ["sync"] }
 async-trait = "0.1.73"
 # [features]

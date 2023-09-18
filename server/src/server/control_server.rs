@@ -72,6 +72,10 @@ impl EventHandler for ControlServer {
             }
             Protocol::TCP => {
                 // let listener = TcpListener::bind(("0.0.0.0", data.tcp_port.unwrap())).await?;
+                if let Err(msg) = validate_subdomain(&data.subdomain) {
+                    let data: TunnelOpen = TunnelOpen::with_error(&msg);
+                    write.send_delimited(data).await?;
+                }
                 if context.contains_key(&data.tcp_port.unwrap().to_string()) {
                     write
                         .send_delimited(TunnelOpen::with_error("Port already in use"))
