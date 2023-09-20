@@ -49,7 +49,7 @@ impl EventHandler for HttpServer {
             }
         };
         t.public_conn.insert(identifier.clone(), stream);
-        t.event_conn
+        t.control_conn
             .lock()
             .await
             .send_delimited(NewClient {

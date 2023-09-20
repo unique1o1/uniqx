@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use shared::Protocol;
 use std::sync::mpsc::channel;
+use tokio::task::spawn_blocking;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about)]
@@ -11,6 +12,9 @@ struct Args {
 }
 #[derive(Subcommand, Debug)]
 enum Command {
+    /// Update uniqx to the latest version
+    Update,
+    /// start uniqx client
     Client {
         /// The protocol to use for the tunnel.
         // #[clap(long, value_enum)]
@@ -36,6 +40,7 @@ enum Command {
         #[clap(short, long, default_value = "false")]
         console: bool,
     },
+    /// start uniqx server
     Server {
         /// Domain being used for public access
         #[clap(short, long)]
@@ -49,7 +54,34 @@ use client::uniqx::UniqxClient;
 
 #[tokio::main]
 async fn run(command: Command) -> Result<()> {
+    println!("uniqx v{}", self_update::cargo_crate_version!());
     match command {
+        Command::Update => {
+            let status = spawn_blocking(|| {
+                self_update::backends::github::Update::configure()
+                    .repo_owner("unique1o1")
+                    .repo_name("uniqx")
+                    .bin_name("uniqx")
+                    .show_download_progress(true)
+                    .current_version(self_update::cargo_crate_version!())
+                    .build()
+                    .unwrap()
+                    .update()
+            })
+            .await?;
+            match status {
+                Ok(self_update::Status::UpToDate(_)) => {
+                    println!("Uniqx is up to date");
+                }
+                Ok(self_update::Status::Updated(s)) => {
+                    println!("Updated to version: {}", s);
+                }
+                Err(e) => {
+                    println!("{}", e);
+                }
+            }
+            return Ok(());
+        }
         Command::Client {
             protocol,
             local_port,

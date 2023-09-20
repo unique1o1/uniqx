@@ -16,6 +16,10 @@ name = "uniqx"
 path = "src/main.rs"
 
 [dependencies]
+self_update = { version = "0.38.0", features = [
+    "archive-tar",
+    "compression-flate2",
+] }
 client = { path = "client" }
 server = { path = "server" }
 tracing-subscriber = { workspace = true }
@@ -24,6 +28,7 @@ shared = { path = "shared" }
 clap = { workspace = true }
 anyhow = { workspace = true }
 ctrlc = "3.4.0"
+
 [workspace]
 members = ["server", "client", "shared"]
 resolver = "2"
@@ -42,6 +47,7 @@ tokio = { version = "1.31.0", features = [
     "net",
     "time",
 ] }
+
 uuid = { version = "1.4.1", features = ["serde", "v4"] }
 serde = { version = "1.0.183", features = ["derive"] }
 tracing = "0.1.37"

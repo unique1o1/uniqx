@@ -30,7 +30,7 @@ impl EventHandler for TcpServer {
         info!(?port, "new tcp connection");
         let t = context.get(&port.to_string()).unwrap();
         t.public_conn.insert(identifier.clone(), stream);
-        t.event_conn
+        t.control_conn
             .lock()
             .await
             .send_delimited(NewClient {
