@@ -16,6 +16,8 @@ name = "uniqx"
 path = "src/main.rs"
 
 [dependencies]
+native-tls = { version = "0.2.11", features = ["vendored"] }
+
 self_update = { version = "0.38.0", features = [
     "archive-tar",
     "compression-flate2",
@@ -28,8 +30,6 @@ shared = { path = "shared" }
 clap = { workspace = true }
 anyhow = { workspace = true }
 ctrlc = "3.4.0"
-
-
 [workspace]
 members = ["server", "client", "shared"]
 resolver = "2"
