@@ -1,22 +1,25 @@
-use std::sync::OnceLock;
 use std::time::Duration;
 
 use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
+use anyhow::Result;
 use client::uniqx::UniqxClient;
+use lazy_static::lazy_static;
 use server::uniqx::UniqxServer;
 use shared::utils::validate_subdomain;
 use shared::SERVER_PORT;
 use std::net::SocketAddr;
-use tokio::sync::Mutex;
-
-use anyhow::Result;
-// use lazy_static::lazy_static;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
+use tokio::sync::Mutex;
 use tokio::time;
-static GUARD: OnceLock<Mutex<()>> = OnceLock::new();
+lazy_static! {
+    /// Guard to make sure that tests are run serially, not concurrently.
+    static ref SERIAL_GUARD: Mutex<()> = Mutex::new(());
+}
+
 /// Spawn the server, giving some time for the control port TcpListener to start.
 async fn spawn_server() {
+    tokio::time::sleep(Duration::from_millis(50)).await;
     tokio::spawn(UniqxServer::new("localhost".to_owned(), 65454).start());
 }
 
@@ -61,12 +64,13 @@ async fn spawn_tcp_client() -> Result<(TcpListener, SocketAddr)> {
     tokio::time::sleep(Duration::from_millis(100)).await;
     Ok((listener, remote_addr))
 }
+
 #[tokio::test]
 async fn tcp_proxy() -> Result<()> {
-    let _guard = GUARD.get_or_init(|| Mutex::new(())).lock().await;
+    let _guard = SERIAL_GUARD.lock().await;
 
+    // initialize().await;
     spawn_server().await;
-
     let (listener, addr) = spawn_tcp_client().await?;
 
     tokio::spawn(async move {
@@ -92,8 +96,7 @@ async fn tcp_proxy() -> Result<()> {
 }
 #[tokio::test]
 async fn very_long_frame() -> Result<()> {
-    let _guard = GUARD.get_or_init(|| Mutex::new(())).lock().await;
-
+    let _guard = SERIAL_GUARD.lock().await;
     spawn_server().await;
     let mut attacker = TcpStream::connect(("localhost", SERVER_PORT)).await?;
 
@@ -133,7 +136,7 @@ pub fn str_from_u8_nul_utf8(utf8_src: &[u8]) -> &str {
 }
 #[tokio::test]
 async fn http_proxy() -> Result<()> {
-    let _guard = GUARD.get_or_init(|| Mutex::new(())).lock().await;
+    let _guard = SERIAL_GUARD.lock().await;
 
     spawn_server().await;
 
@@ -143,6 +146,7 @@ async fn http_proxy() -> Result<()> {
         App::new().route(
             "/test",
             web::get().to(|req: HttpRequest| async move {
+                println!("asdfasdfasdfas");
                 assert_eq!(req.query_string(), "foo=bar");
                 HttpResponse::Ok().body("Hello world!")
             }),
@@ -152,7 +156,7 @@ async fn http_proxy() -> Result<()> {
     .unwrap();
     tokio::spawn(listner.disable_signals().run());
 
-    let mut stream = TcpStream::connect(remote_addr).await?;
+    let mut stream = TcpStream::connect(remote_addr).await.unwrap();
 
     let request = "GET /test?foo=bar HTTP/1.1\r\n\
                    Host: test.localhost:65454\r\n\
@@ -165,7 +169,7 @@ async fn http_proxy() -> Result<()> {
     let _ = stream.read(&mut buf).await?;
     let mut headers = [httparse::EMPTY_HEADER; 64];
     let mut res = httparse::Response::new(&mut headers);
-    let status = res.parse(&buf)?; // assuming that the response is complete
+    let status = res.parse(&buf).unwrap(); // assuming that the response is complete
     let offset = status.unwrap();
     assert_eq!(str_from_u8_nul_utf8(buf[offset..].into()), "Hello world!");
     Ok(())

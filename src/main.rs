@@ -49,12 +49,9 @@ enum Command {
         http_port: u16,
     },
 }
-// mod console;
 use client::uniqx::UniqxClient;
-
 #[tokio::main]
 async fn run(command: Command) -> Result<()> {
-    println!("uniqx v{}", self_update::cargo_crate_version!());
     match command {
         Command::Update => {
             let status = spawn_blocking(|| {

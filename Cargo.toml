@@ -29,6 +29,7 @@ clap = { workspace = true }
 anyhow = { workspace = true }
 ctrlc = "3.4.0"
 
+
 [workspace]
 members = ["server", "client", "shared"]
 resolver = "2"
@@ -72,3 +73,4 @@ strip = true
 rstest = "0.18.2"
 actix-web = { version = "4" }
 httparse = { workspace = true }
+lazy_static = "1.4.0"
