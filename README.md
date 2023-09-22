@@ -63,6 +63,13 @@ The full options for the `bore server` command are shown below.
 ```bash
 uniqx server --help
 ```
+
+### Update Uniqx
+
+```bash
+sudo uniqx update
+```
+
 ---
 The uniqx tool has an implicit control port at `9876` that is used for creating new connections on demand. When the client initializes a connection, it sends a message to the server on the TCP control port, asking to proxy a selected protocol and remote port(for TCP). The server then responds with an acknowledgement and begins listening for external HTTP/TCP connections.
 
