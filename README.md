@@ -30,7 +30,7 @@ You can forward a port on your local machine by using the `uniqx` command. This 
 ```bash
 uniqx client http --remote-host example.com --local-port 9000 --subdomain unique
 ```
-For enable console UI
+To enable console UI
 ```bash
 uniqx client http --remote-host example.com --local-port 9000 --subdomain unique --console
 ```
