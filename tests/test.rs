@@ -20,7 +20,12 @@ lazy_static! {
 /// Spawn the server, giving some time for the control port TcpListener to start.
 async fn spawn_server() {
     tokio::time::sleep(Duration::from_millis(50)).await;
-    tokio::spawn(UniqxServer::new("localhost".to_owned(), 65454).start());
+    tokio::spawn(
+        UniqxServer::new("localhost".to_owned(), 65454, None, None)
+            .await
+            .unwrap()
+            .start(),
+    );
 }
 
 /// Spawns a client with randomly assigned ports, returning the listener and remote address.
@@ -33,6 +38,8 @@ async fn spawn_http_client() -> Result<(SocketAddr, SocketAddr)> {
         "localhost".to_owned(),
         "test".to_owned(),
         "localhost".to_owned(),
+        false,
+        false,
         false,
     )
     .await
@@ -55,6 +62,8 @@ async fn spawn_tcp_client() -> Result<(TcpListener, SocketAddr)> {
         "localhost".to_owned(),
         "test".to_owned(),
         "localhost".to_owned(),
+        false,
+        false,
         false,
     )
     .await

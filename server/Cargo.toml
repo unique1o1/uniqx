@@ -16,3 +16,6 @@ dashmap = { workspace = true }
 tracing = { workspace = true }
 async-trait = "0.1.73"
 socket2 = { workspace = true }
+tokio-rustls = "0.24.1"
+rustls = "0.21.7"
+rustls-pemfile = "1.0.3"
