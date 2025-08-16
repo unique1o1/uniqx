@@ -2,6 +2,10 @@
 name = "client"
 version = "0.1.0"
 edition = "2021"
+description = "Client library for the uniqx TCP/HTTP tunnel."
+license = "MIT"
+repository = "https://github.com/unique1o1/uniqx.git"
+authors = ["unique1o1"]
 
 [dependencies]
 

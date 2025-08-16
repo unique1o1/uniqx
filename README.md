@@ -57,6 +57,30 @@ uniqx server --domain "example.com"
 
 That's all it takes! After the server starts running at a given address, you can then update the `uniqx` command with option `--remote-host <ADDRESS>` to forward a local port to this remote server.
 
+### Securing the Tunnel with TLS
+
+For enhanced security, you can secure the control connection between the client and server using TLS encryption.
+
+**Server Setup**
+
+To enable TLS on the server, you must provide a TLS certificate and a private key using the `--cert` and `--key` flags.
+
+```bash
+uniqx server --domain "tunnel.example.com" --cert /path/to/cert.pem --key /path/to/key.pem
+```
+
+**Client Setup**
+
+Once the server is running with TLS, clients must connect using the `--tls` flag.
+
+```bash
+uniqx client http --remote-host tunnel.example.com --local-port 9000 --subdomain my-app --tls
+```
+
+If you are using a self-signed certificate on the server for development purposes, you will also need to add the `--insecure` flag to the client command.
+
+> **Warning:** The `--insecure` flag disables certificate validation, making the connection vulnerable to man-in-the-middle attacks. It should only be used for testing with trusted servers.
+
 The full options for the `bore server` command are shown below.
 
 
