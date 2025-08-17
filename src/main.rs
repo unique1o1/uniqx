@@ -45,6 +45,9 @@ enum Command {
         /// Skip TLS certificate verification (not recommended).
         #[clap(long)]
         insecure: bool,
+        /// Path to a custom CA certificate file for TLS verification.
+        #[clap(long)]
+        ca_cert: Option<String>,
     },
     /// start uniqx server
     Server {
@@ -101,6 +104,7 @@ async fn run(command: Command) -> Result<()> {
             console,
             tls,
             insecure,
+            ca_cert,
         } => {
             let client = UniqxClient::new(
                 protocol,
@@ -112,6 +116,7 @@ async fn run(command: Command) -> Result<()> {
                 console,
                 tls,
                 insecure,
+                ca_cert,
             )
             .await?;
             client.start().await?;

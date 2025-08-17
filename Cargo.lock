@@ -503,6 +503,7 @@ dependencies = [
  "futures-util",
  "httparse",
  "rustls",
+ "rustls-pemfile",
  "serde",
  "serde_json",
  "shared",

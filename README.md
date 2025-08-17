@@ -77,9 +77,15 @@ Once the server is running with TLS, clients must connect using the `--tls` flag
 uniqx client http --remote-host tunnel.example.com --local-port 9000 --subdomain my-app --tls
 ```
 
-If you are using a self-signed certificate on the server for development purposes, you will also need to add the `--insecure` flag to the client command.
+If you are using a self-signed certificate on the server, it is **highly recommended** to use the `--ca-cert` flag to specify the path to the server's public certificate. This tells the client to trust your specific certificate, which is much more secure than disabling verification entirely.
 
-> **Warning:** The `--insecure` flag disables certificate validation, making the connection vulnerable to man-in-the-middle attacks. It should only be used for testing with trusted servers.
+```bash
+uniqx client http --remote-host tunnel.example.com --local-port 9000 --subdomain my-app --tls --ca-cert /path/to/cert.pem
+```
+
+As a less secure alternative for quick testing, you can use the `--insecure` flag, which disables certificate validation.
+
+> **Warning:** The `--insecure` flag makes the connection vulnerable to man-in-the-middle attacks. It should only be used for testing with trusted servers.
 
 The full options for the `bore server` command are shown below.
 

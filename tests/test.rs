@@ -41,6 +41,7 @@ async fn spawn_http_client() -> Result<(SocketAddr, SocketAddr)> {
         false,
         false,
         false,
+        None,
     )
     .await
     .unwrap();
@@ -65,6 +66,7 @@ async fn spawn_tcp_client() -> Result<(TcpListener, SocketAddr)> {
         false,
         false,
         false,
+        None,
     )
     .await
     .unwrap();

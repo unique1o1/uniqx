@@ -20,12 +20,15 @@ use tracing::info_span;
 use tracing::Instrument;
 
 use anyhow::Context;
+use std::fs::File;
+use std::io::BufReader;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
 use tokio_rustls::{
     rustls::{self, ClientConfig, OwnedTrustAnchor},
     TlsConnector,
 };
+use rustls_pemfile;
 
 use crate::console;
 use crate::console::handler::ConsoleHandler;
@@ -104,6 +107,7 @@ impl UniqxClient {
         console: bool,
         tls: bool,
         insecure: bool,
+        ca_cert: Option<String>,
     ) -> Result<Self> {
         let stream = if tls {
             if insecure {
@@ -134,15 +138,22 @@ impl UniqxClient {
                 SecureStream::Tls(stream)
             } else {
                 let mut root_cert_store = rustls::RootCertStore::empty();
-                root_cert_store.add_trust_anchors(
-                    webpki_roots::TLS_SERVER_ROOTS.iter().map(|ta| {
-                        OwnedTrustAnchor::from_subject_spki_name_constraints(
-                            ta.subject,
-                            ta.spki,
-                            ta.name_constraints,
-                        )
-                    }),
-                );
+                if let Some(ca_cert_path) = ca_cert {
+                    let mut pem = BufReader::new(File::open(ca_cert_path)?);
+                    let certs = rustls_pemfile::certs(&mut pem)?;
+                    root_cert_store.add_parsable_certificates(&certs);
+                } else {
+                    root_cert_store.add_trust_anchors(
+                        webpki_roots::TLS_SERVER_ROOTS.iter().map(|ta| {
+                            OwnedTrustAnchor::from_subject_spki_name_constraints(
+                                ta.subject,
+                                ta.spki,
+                                ta.name_constraints,
+                            )
+                        }),
+                    );
+                }
+
                 let config = ClientConfig::builder()
                     .with_safe_defaults()
                     .with_root_certificates(root_cert_store)
