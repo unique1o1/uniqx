@@ -39,6 +39,15 @@ enum Command {
         // Enable request console UI
         #[clap(short, long, default_value = "false")]
         console: bool,
+        /// Use TLS for the control connection
+        #[clap(long)]
+        tls: bool,
+        /// Skip TLS certificate verification (not recommended).
+        #[clap(long)]
+        insecure: bool,
+        /// Path to a custom CA certificate file for TLS verification.
+        #[clap(long)]
+        ca_cert: Option<String>,
     },
     /// start uniqx server
     Server {
@@ -47,6 +56,12 @@ enum Command {
         domain: String,
         #[clap(long, default_value_t = 80)]
         http_port: u16,
+        /// Path to the TLS certificate file (optional).
+        #[clap(long)]
+        cert: Option<String>,
+        /// Path to the TLS private key file (optional).
+        #[clap(long)]
+        key: Option<String>,
     },
 }
 use client::uniqx::UniqxClient;
@@ -87,6 +102,9 @@ async fn run(command: Command) -> Result<()> {
             subdomain,
             local_host,
             console,
+            tls,
+            insecure,
+            ca_cert,
         } => {
             let client = UniqxClient::new(
                 protocol,
@@ -96,12 +114,20 @@ async fn run(command: Command) -> Result<()> {
                 subdomain,
                 local_host,
                 console,
+                tls,
+                insecure,
+                ca_cert,
             )
             .await?;
             client.start().await?;
         }
-        Command::Server { domain, http_port } => {
-            let tunnel = server::uniqx::UniqxServer::new(domain, http_port);
+        Command::Server {
+            domain,
+            http_port,
+            cert,
+            key,
+        } => {
+            let tunnel = server::uniqx::UniqxServer::new(domain, http_port, cert, key).await?;
             tunnel.start().await?;
             let (tx, rx) = channel();
             ctrlc::set_handler(move || tx.send(()).expect("Could not send signal on channel."))

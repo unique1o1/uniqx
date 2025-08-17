@@ -2,6 +2,10 @@
 name = "client"
 version = "0.1.0"
 edition = "2021"
+description = "Client library for the uniqx TCP/HTTP tunnel."
+license = "MIT"
+repository = "https://github.com/unique1o1/uniqx.git"
+authors = ["unique1o1"]
 
 [dependencies]
 
@@ -24,5 +28,9 @@ async-stream = "0.3.5"
 httparse = { workspace = true }
 tokio-stream = { version = "0.1.14", features = ["sync"] }
 async-trait = "0.1.73"
+tokio-rustls = "0.24.1"
+rustls = { version = "0.21.7", features = ["dangerous_configuration"] }
+webpki-roots = "0.25.3"
+rustls-pemfile = "1.0.3"
 # [features]
 # console = ["dep:actix-web", "shared/console"]

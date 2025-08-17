@@ -8,11 +8,9 @@ use shared::structs::NewClient;
 use shared::structs::TunnelOpen;
 use shared::structs::TunnelRequest;
 use shared::utils::proxy;
-use shared::utils::set_tcp_keepalive;
 use shared::Protocol;
 use shared::EVENT_SERVER_PORT;
 use shared::SERVER_PORT;
-use socket2::SockRef;
 use std::process::exit;
 use std::sync::Arc;
 use tokio::io::{self};
@@ -21,9 +19,68 @@ use tracing::info;
 use tracing::info_span;
 use tracing::Instrument;
 
+use anyhow::Context;
+use std::fs::File;
+use std::io::BufReader;
+use tokio::io::{AsyncRead, AsyncWrite};
+use tokio::net::TcpStream;
+use tokio_rustls::{
+    rustls::{self, ClientConfig, OwnedTrustAnchor},
+    TlsConnector,
+};
+use rustls_pemfile;
+
 use crate::console;
 use crate::console::handler::ConsoleHandler;
 use crate::util::bind_with_console;
+use std::pin::Pin;
+use std::task::{Context as TaskContext, Poll};
+use tokio_rustls::client::TlsStream;
+
+enum SecureStream {
+    Plain(TcpStream),
+    Tls(TlsStream<TcpStream>),
+}
+
+impl AsyncRead for SecureStream {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut TaskContext<'_>,
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
+        match &mut *self {
+            SecureStream::Plain(stream) => Pin::new(stream).poll_read(cx, buf),
+            SecureStream::Tls(stream) => Pin::new(stream).poll_read(cx, buf),
+        }
+    }
+}
+
+impl AsyncWrite for SecureStream {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        cx: &mut TaskContext<'_>,
+        buf: &[u8],
+    ) -> Poll<Result<usize, io::Error>> {
+        match &mut *self {
+            SecureStream::Plain(stream) => Pin::new(stream).poll_write(cx, buf),
+            SecureStream::Tls(stream) => Pin::new(stream).poll_write(cx, buf),
+        }
+    }
+
+    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut TaskContext<'_>) -> Poll<Result<(), io::Error>> {
+        match &mut *self {
+            SecureStream::Plain(stream) => Pin::new(stream).poll_flush(cx),
+            SecureStream::Tls(stream) => Pin::new(stream).poll_flush(cx),
+        }
+    }
+
+    fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut TaskContext<'_>) -> Poll<Result<(), io::Error>> {
+        match &mut *self {
+            SecureStream::Plain(stream) => Pin::new(stream).poll_shutdown(cx),
+            SecureStream::Tls(stream) => Pin::new(stream).poll_shutdown(cx),
+        }
+    }
+}
 
 pub struct UniqxClient {
     local_port: u16,
@@ -33,8 +90,10 @@ pub struct UniqxClient {
     subdomain: String,
     port: Option<u16>,
     console: bool,
-    conn: Option<DelimitedStream>,
+    conn: Option<DelimitedStream<SecureStream>>,
     console_handler: Option<ConsoleHandler>,
+    tls: bool,
+    insecure: bool,
 }
 
 impl UniqxClient {
@@ -46,13 +105,75 @@ impl UniqxClient {
         subdomain: String,
         local_host: String,
         console: bool,
+        tls: bool,
+        insecure: bool,
+        ca_cert: Option<String>,
     ) -> Result<Self> {
-        let conn = connect_with_timeout(&remote_host, SERVER_PORT).await?;
+        let stream = if tls {
+            if insecure {
+                // custom verifier that trusts any cert
+                struct DangerousServerCertVerifier;
+                impl rustls::client::ServerCertVerifier for DangerousServerCertVerifier {
+                    fn verify_server_cert(
+                        &self,
+                        _end_entity: &rustls::Certificate,
+                        _intermediates: &[rustls::Certificate],
+                        _server_name: &rustls::ServerName,
+                        _scts: &mut dyn Iterator<Item = &[u8]>,
+                        _ocsp_response: &[u8],
+                        _now: std::time::SystemTime,
+                    ) -> Result<rustls::client::ServerCertVerified, rustls::Error> {
+                        Ok(rustls::client::ServerCertVerified::assertion())
+                    }
+                }
+                let config = ClientConfig::builder()
+                    .with_safe_defaults()
+                    .with_custom_certificate_verifier(Arc::new(DangerousServerCertVerifier {}))
+                    .with_no_client_auth();
+                let connector = TlsConnector::from(Arc::new(config));
+                let stream = connect_with_timeout(&remote_host, SERVER_PORT).await?;
+                let domain = rustls::ServerName::try_from(remote_host.as_str())
+                    .with_context(|| format!("Invalid DNS name: {}", remote_host))?;
+                let stream = connector.connect(domain, stream).await?;
+                SecureStream::Tls(stream)
+            } else {
+                let mut root_cert_store = rustls::RootCertStore::empty();
+                if let Some(ca_cert_path) = ca_cert {
+                    let mut pem = BufReader::new(File::open(ca_cert_path)?);
+                    let certs = rustls_pemfile::certs(&mut pem)?;
+                    root_cert_store.add_parsable_certificates(&certs);
+                } else {
+                    root_cert_store.add_trust_anchors(
+                        webpki_roots::TLS_SERVER_ROOTS.iter().map(|ta| {
+                            OwnedTrustAnchor::from_subject_spki_name_constraints(
+                                ta.subject,
+                                ta.spki,
+                                ta.name_constraints,
+                            )
+                        }),
+                    );
+                }
 
-        SockRef::from(&conn)
-            .set_tcp_keepalive(&set_tcp_keepalive())
-            .unwrap();
-        let stream = delimited_framed(conn);
+                let config = ClientConfig::builder()
+                    .with_safe_defaults()
+                    .with_root_certificates(root_cert_store)
+                    .with_no_client_auth();
+                let connector = TlsConnector::from(Arc::new(config));
+                let stream = connect_with_timeout(&remote_host, SERVER_PORT).await?;
+                let domain = rustls::ServerName::try_from(remote_host.as_str())
+                    .with_context(|| format!("Invalid DNS name: {}", remote_host))?;
+                let stream = connector.connect(domain, stream).await?;
+                SecureStream::Tls(stream)
+            }
+        } else {
+            let stream = connect_with_timeout(&remote_host, SERVER_PORT).await?;
+            SecureStream::Plain(stream)
+        };
+
+        // SockRef::from(&conn)
+        //     .set_tcp_keepalive(&set_tcp_keepalive())
+        //     .unwrap();
+        let stream = delimited_framed(stream);
 
         Ok(Self {
             local_port,
@@ -64,6 +185,8 @@ impl UniqxClient {
             console,
             conn: Some(stream),
             console_handler: None,
+            tls,
+            insecure,
         })
     }
 
